@@ -1,0 +1,47 @@
+# fly.toml — InterviewCraft backend deployment on Fly.io
+# Deploy: fly deploy --config fly.toml
+
+app = "interviewcraft-api"
+primary_region = "iad"  # US East — closest to Anthropic/Deepgram endpoints
+
+[build]
+  dockerfile = "backend/Dockerfile"
+  dockerfile_target = "production"  # uses multi-stage build
+
+[env]
+  APP_ENV = "production"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true   # scale to zero when idle (cost saving)
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# Health check — Fly.io uses this for rolling deploys
+[[http_service.checks]]
+  interval = "10s"
+  timeout = "5s"
+  grace_period = "30s"
+  method = "GET"
+  path = "/health"
+
+# Secrets (set via `fly secrets set KEY=value`):
+#   DATABASE_URL
+#   REDIS_URL
+#   SECRET_KEY
+#   JWT_SECRET_KEY
+#   ANTHROPIC_API_KEY
+#   DEEPGRAM_API_KEY
+#   ELEVENLABS_API_KEY

@@ -1,0 +1,23 @@
+# CODEOWNERS — defines who must approve pull requests.
+#
+# Every PR requires approval from the repository owner before it can be merged.
+# GitHub enforces this automatically when branch protection is enabled.
+#
+# To enable: GitHub → Settings → Branches → Add rule for main/stage/dev
+#   ✅ Require a pull request before merging
+#   ✅ Require approvals: 1
+#   ✅ Require review from Code Owners
+#   ✅ Require status checks to pass (add: backend-ci, frontend-ci, pr-gate)
+#   ✅ Do not allow bypassing the above settings
+
+# Default owner for everything
+* @alexdoroshevich
+
+# Backend
+/backend/ @alexdoroshevich
+
+# Frontend
+/frontend/ @alexdoroshevich
+
+# CI/CD — extra scrutiny on pipeline changes
+/.github/ @alexdoroshevich

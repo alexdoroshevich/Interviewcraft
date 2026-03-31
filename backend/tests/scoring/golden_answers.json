@@ -1,0 +1,276 @@
+[
+  {
+    "id": "weak_behavioral_01",
+    "question": "Tell me about a technical challenge you faced.",
+    "answer": "We had a database that was slow. I fixed it. It was better after.",
+    "question_type": "behavioral",
+    "expected_rules": ["no_star_structure", "missing_result", "result_not_specific", "missing_metrics", "no_tradeoff"],
+    "expected_score_range": [10, 40],
+    "notes": "Minimal detail, no STAR, no numbers, no ownership"
+  },
+  {
+    "id": "strong_behavioral_01",
+    "question": "Tell me about a technical challenge you faced.",
+    "answer": "Our PostgreSQL queries were hitting 4s p95 under 10K QPS. I profiled and found N+1 queries in the order service. I evaluated three options: query optimization, read replicas, or caching. I chose read replicas plus query batching because it addressed both latency and future scale. The tradeoff was eventual consistency on dashboards, which we accepted given our SLAs. The result was p95 dropped from 4s to 120ms, saving $40K per month in compute costs. I also mentored two junior engineers through the migration.",
+    "question_type": "behavioral",
+    "expected_rules": [],
+    "expected_score_range": [78, 98],
+    "notes": "Full STAR, numbers, tradeoff, ownership, mentoring signal"
+  },
+  {
+    "id": "weak_behavioral_02",
+    "question": "Describe a time you had to influence without authority.",
+    "answer": "I had to convince my team to use a different approach. It was difficult but eventually they agreed and things went better.",
+    "question_type": "behavioral",
+    "expected_rules": ["missing_metrics", "result_not_specific", "no_stakeholder_mgmt", "missing_result"],
+    "expected_score_range": [15, 45],
+    "notes": "Vague, no stakeholder detail, no outcome numbers"
+  },
+  {
+    "id": "strong_behavioral_02",
+    "question": "Describe a time you had to influence without authority.",
+    "answer": "I needed to get three teams to adopt a new API versioning standard without any direct authority over them. I started by documenting the problem: we had 12 breaking changes in the last quarter that caused 4 production incidents. I presented this data to the tech leads and proposed a versioning RFC. Two teams were skeptical about the migration cost so I offered to write the migration scripts myself. I tracked adoption weekly and unblocked each team personally. After 6 weeks all teams had adopted the standard and breaking-change incidents dropped to zero.",
+    "question_type": "behavioral",
+    "expected_rules": [],
+    "expected_score_range": [75, 95],
+    "notes": "Strong stakeholder management, specific numbers, clear ownership, measurable result"
+  },
+  {
+    "id": "weak_system_design_01",
+    "question": "Design a URL shortener like bit.ly.",
+    "answer": "I would use a database to store the URLs and a web server to handle requests. When someone visits the short URL it redirects to the long URL.",
+    "question_type": "system_design",
+    "expected_rules": ["no_assumptions", "no_tradeoff", "missing_metrics", "no_scale_thinking"],
+    "expected_score_range": [10, 35],
+    "notes": "No scale assumptions, no tradeoff, no technology choices justified"
+  },
+  {
+    "id": "strong_system_design_01",
+    "question": "Design a URL shortener like bit.ly.",
+    "answer": "Let me start with assumptions: 100 million URLs created per day, 10 billion reads per day, read-heavy ratio of 100:1, 5-year retention. For the short URL generation I would use base62 encoding of an auto-incrementing ID giving us 62^7 = 3.5 trillion unique URLs which is sufficient. For storage: each URL needs about 500 bytes so 100M per day is 50GB per day, 180TB over 5 years - manageable with sharded MySQL. For reads at 10 billion per day that's 115K QPS, so I'd put a CDN in front plus Redis cache with LRU eviction. The tradeoff with Redis is cache invalidation complexity versus the performance gain, which I'd accept. For the redirect service I'd use 301 for permanent and 302 for analytics. The database bottleneck at this scale would be the write path - I'd use Cassandra for the URL mapping table to handle write throughput.",
+    "question_type": "system_design",
+    "expected_rules": [],
+    "expected_score_range": [80, 98],
+    "notes": "Assumptions stated, numbers throughout, tradeoffs discussed, scale thinking present"
+  },
+  {
+    "id": "weak_behavioral_no_ownership",
+    "question": "Tell me about a project you're proud of.",
+    "answer": "We built a microservices migration. We decided to break the monolith into services. We used Docker and Kubernetes. We deployed it and performance improved. The team worked really hard on it.",
+    "question_type": "behavioral",
+    "expected_rules": ["no_ownership", "result_not_specific", "missing_metrics"],
+    "expected_score_range": [20, 45],
+    "notes": "All we/team, no personal ownership, vague result"
+  },
+  {
+    "id": "strong_behavioral_with_metrics",
+    "question": "Tell me about a time you improved system performance.",
+    "answer": "I inherited a batch processing job that was timing out on large datasets. I profiled it and found that the bottleneck was deserializing 50MB JSON files for each of 10,000 items in a loop - an O(n squared) problem. I replaced it with streaming JSON parsing using a SAX-style reader which reduced memory usage from 8GB to 200MB and processing time from 45 minutes to 3 minutes. This unblocked two downstream teams and saved $2,000 per month in EC2 costs. The tradeoff was increased code complexity which I mitigated with thorough unit tests and documentation.",
+    "question_type": "behavioral",
+    "expected_rules": [],
+    "expected_score_range": [80, 98],
+    "notes": "Personal ownership, specific metrics, tradeoff, cost impact, team impact"
+  },
+  {
+    "id": "mid_behavioral_partial",
+    "question": "Tell me about a conflict with a coworker.",
+    "answer": "I disagreed with a senior engineer about the database schema design. I believed we needed a normalized schema but they wanted denormalized for performance. I prepared a comparison of both approaches with query benchmarks showing our schema would handle the current load fine. After reviewing my analysis they agreed to go with the normalized approach. The project shipped on time.",
+    "question_type": "behavioral",
+    "expected_rules": ["missing_metrics", "result_not_specific"],
+    "expected_score_range": [50, 72],
+    "notes": "Good conflict resolution, some evidence, but missing quantitative outcome"
+  },
+  {
+    "id": "weak_negotiation_01",
+    "question": "We can offer you $180,000 base salary. Does that work for you?",
+    "answer": "That sounds good to me, I can accept that.",
+    "question_type": "negotiation",
+    "expected_rules": ["early_concession", "weak_anchor"],
+    "expected_score_range": [5, 25],
+    "notes": "Accepted first offer immediately, no counter, no anchor"
+  },
+
+  {
+    "id": "weak_negotiation_02",
+    "question": "Our budget for this role is $150,000 to $170,000. Where do you fall in that range?",
+    "answer": "I think $155,000 would be reasonable for me. I'm flexible though and really excited about the opportunity, so I'd be willing to go lower if needed.",
+    "question_type": "negotiation",
+    "expected_rules": ["weak_anchor", "early_concession"],
+    "expected_score_range": [5, 30],
+    "notes": "Anchored at bottom of their range, immediately offered to go even lower"
+  },
+  {
+    "id": "mid_negotiation_01",
+    "question": "We'd like to offer you $165,000 base. What are your thoughts?",
+    "answer": "Thank you for the offer. Based on my research into market rates for this role and my 8 years of experience, I was expecting something closer to $190,000. Can you walk me through how you arrived at that number?",
+    "question_type": "negotiation",
+    "expected_rules": [],
+    "expected_score_range": [60, 85],
+    "notes": "Reanchored above their offer, asked a question instead of conceding, referenced market data"
+  },
+  {
+    "id": "strong_negotiation_01",
+    "question": "What are your salary expectations for this role?",
+    "answer": "Based on my research of comparable Staff Engineer roles at companies of this size and stage, and considering my 10 years of experience including 3 years leading distributed systems teams, I'm targeting a total compensation of $280,000 to $310,000. That includes base, equity, and bonus. I'd love to understand how your compensation bands are structured so we can find the right package.",
+    "question_type": "negotiation",
+    "expected_rules": [],
+    "expected_score_range": [70, 95],
+    "notes": "Strong anchor with justification, total comp framing, invites dialogue without conceding"
+  },
+  {
+    "id": "weak_negotiation_03",
+    "question": "Unfortunately we can't go above $170,000 for this level. Can you work with that?",
+    "answer": "OK, I understand budget constraints. I can make $170,000 work. When would I start?",
+    "question_type": "negotiation",
+    "expected_rules": ["early_concession", "weak_anchor"],
+    "expected_score_range": [5, 25],
+    "notes": "Folded immediately on pushback, moved to logistics instead of exploring other levers"
+  },
+  {
+    "id": "mid_negotiation_02",
+    "question": "We think $175,000 is very competitive for this market. What do you think?",
+    "answer": "I appreciate the context. My understanding of the market for engineers with my background in ML infrastructure is a bit higher, around $195,000 to $205,000. I'm very interested in the role though, so if there's flexibility on equity or signing bonus that could help bridge the gap. What does the equity component look like?",
+    "question_type": "negotiation",
+    "expected_rules": [],
+    "expected_score_range": [65, 88],
+    "notes": "Reanchored with specific range, explored other compensation levers, didn't concede base"
+  },
+
+  {
+    "id": "weak_system_design_02",
+    "question": "Design a notification system for a social media platform.",
+    "answer": "I would have a notifications table in the database. When something happens like a like or a comment, we insert a row. The app polls the database every few seconds to check for new notifications. We'd show them in a dropdown in the UI.",
+    "question_type": "system_design",
+    "expected_rules": ["no_assumptions", "no_tradeoff", "no_scale_thinking", "missing_metrics"],
+    "expected_score_range": [10, 35],
+    "notes": "No scale assumptions, polling approach with no justification, no discussion of push vs pull tradeoffs"
+  },
+  {
+    "id": "mid_system_design_01",
+    "question": "Design a rate limiter for an API gateway.",
+    "answer": "I'd use a token bucket algorithm. Each user gets a bucket with a fixed capacity, say 100 requests per minute. We store the bucket state in Redis since it's fast and supports atomic operations. When a request comes in, we check if there are tokens available. If yes, we decrement and allow; if no, we return a 429. The tradeoff between token bucket and sliding window is that token bucket allows short bursts while sliding window is smoother. I chose token bucket because most API clients send requests in bursts.",
+    "question_type": "system_design",
+    "expected_rules": ["no_assumptions", "no_scale_thinking"],
+    "expected_score_range": [45, 68],
+    "notes": "Has tradeoff discussion but missing scale assumptions and growth thinking"
+  },
+  {
+    "id": "strong_system_design_02",
+    "question": "Design a real-time chat system like Slack.",
+    "answer": "Let me start with assumptions: 10 million DAU, average 50 messages per user per day, so 500 million messages daily. Peak load is 3x average, so roughly 17,000 messages per second at peak. Message size averages 500 bytes, giving us about 250GB of new data per day. For the real-time delivery I'd use WebSocket connections. Each server can handle roughly 50,000 concurrent connections, so we need at least 200 WebSocket servers behind a load balancer with sticky sessions. For the message flow: client sends via WebSocket to a gateway server, which publishes to a message broker like Kafka partitioned by channel_id. Subscriber services consume from Kafka and push to connected clients. The tradeoff with Kafka is added latency of 5-10ms versus direct server-to-server forwarding, but Kafka gives us durability, replay capability, and decouples producers from consumers. For storage, messages go to Cassandra for write throughput, with a TTL of 1 year for free-tier users. At 10x growth, the bottleneck shifts to the WebSocket layer, so I'd design the connection routing to be horizontally shardable from the start using consistent hashing on user_id.",
+    "question_type": "system_design",
+    "expected_rules": [],
+    "expected_score_range": [80, 98],
+    "notes": "Clear assumptions with math, technology choices justified, tradeoffs explicit, scale thinking present"
+  },
+  {
+    "id": "weak_system_design_03",
+    "question": "How would you design a distributed cache?",
+    "answer": "I'd use Redis. You put things in the cache and read them back. If it's not in the cache you go to the database. Redis is really fast because it's in memory.",
+    "question_type": "system_design",
+    "expected_rules": ["no_assumptions", "no_tradeoff", "no_scale_thinking", "missing_metrics"],
+    "expected_score_range": [5, 30],
+    "notes": "No assumptions about data size or access patterns, no tradeoff analysis, no scale discussion"
+  },
+  {
+    "id": "mid_system_design_02",
+    "question": "Design a job scheduling system like cron at scale.",
+    "answer": "Assuming we need to support 1 million scheduled jobs with per-minute granularity. I'd use a priority queue backed by a sorted set in Redis, where the score is the next execution timestamp. A scheduler process polls the sorted set every second for jobs whose score is less than or equal to now, and dispatches them to a work queue in RabbitMQ. Workers pull jobs and execute them. For reliability, jobs get a visibility timeout. If a worker crashes, the job becomes available again after 30 seconds. The tradeoff with Redis sorted sets is that if the Redis node fails we lose the schedule state. I'd mitigate this with Redis Sentinel for failover and periodic snapshots to PostgreSQL. However, I haven't fully considered what happens at 10x scale with 10 million jobs, where the sorted set scan could become a bottleneck.",
+    "question_type": "system_design",
+    "expected_rules": ["no_scale_thinking"],
+    "expected_score_range": [55, 75],
+    "notes": "Good assumptions and tradeoff analysis, but acknowledges missing scale thinking rather than solving it"
+  },
+
+  {
+    "id": "weak_coding_discussion_01",
+    "question": "How would you approach building a search autocomplete feature?",
+    "answer": "I would use a trie data structure. When the user types each character, we traverse the trie and return all matching completions. It's a pretty standard approach and works well for this kind of thing.",
+    "question_type": "coding_discussion",
+    "expected_rules": ["no_tradeoff", "missing_metrics", "no_scale_thinking"],
+    "expected_score_range": [20, 45],
+    "notes": "Mentions trie but no tradeoff analysis against alternatives, no latency targets, no scale discussion"
+  },
+  {
+    "id": "strong_coding_discussion_01",
+    "question": "How would you design an efficient LRU cache?",
+    "answer": "I'd combine a doubly-linked list with a hash map to achieve O(1) for both get and put operations. The hash map stores key to node pointers, and the linked list maintains access order with most-recently-used at the head. On get, I move the node to the head. On put, I insert at head and if capacity is exceeded, I evict the tail node. The tradeoff versus a simpler approach like an ordered dict is that the explicit data structure gives us more control, such as supporting TTL-based eviction by also tracking insertion time on each node. For thread safety, I'd use a read-write lock: reads can be concurrent, but writes take an exclusive lock. At high concurrency with thousands of threads, this becomes a bottleneck, so I'd consider sharding the cache into 16 segments to reduce lock contention, similar to Java's ConcurrentHashMap. Memory overhead is approximately 64 bytes per entry for the linked list node plus hash map entry, so for 1 million cached items that's about 64MB of overhead.",
+    "question_type": "coding_discussion",
+    "expected_rules": [],
+    "expected_score_range": [75, 95],
+    "notes": "Clear complexity analysis, tradeoff discussion, concurrency consideration, scale thinking with numbers"
+  },
+  {
+    "id": "mid_coding_discussion_01",
+    "question": "Walk me through how you'd implement pagination for a large dataset.",
+    "answer": "There are two main approaches: offset-based and cursor-based pagination. Offset-based uses LIMIT and OFFSET in SQL, which is simple but degrades at high page numbers because the database still has to scan through all skipped rows. Cursor-based pagination uses a WHERE clause on an indexed column like id or created_at, which performs consistently regardless of page depth. I'd choose cursor-based for any dataset over 100,000 rows. The tradeoff is that cursor-based doesn't support jumping to arbitrary page numbers, which some UIs require.",
+    "question_type": "coding_discussion",
+    "expected_rules": ["no_scale_thinking"],
+    "expected_score_range": [55, 75],
+    "notes": "Good tradeoff analysis between approaches, but missing deeper scale discussion about caching, pre-computation, or growth"
+  },
+  {
+    "id": "weak_coding_discussion_02",
+    "question": "How would you handle database migrations in a zero-downtime deployment?",
+    "answer": "You just run the migrations before deploying the new code. If something goes wrong you roll back. Most ORMs have migration tools that handle this. We've done it that way at my company and it works fine.",
+    "question_type": "coding_discussion",
+    "expected_rules": ["no_tradeoff", "missing_metrics", "no_scale_thinking", "shallow_followup"],
+    "expected_score_range": [15, 40],
+    "notes": "No consideration of backward compatibility, lock contention, or expand-contract pattern"
+  },
+  {
+    "id": "strong_coding_discussion_02",
+    "question": "Explain how you'd implement a distributed lock.",
+    "answer": "I'd start with the requirements: we need mutual exclusion, deadlock freedom, and fault tolerance. The simplest approach is a Redis-based lock using SET with NX and PX flags, giving us atomic acquire with automatic expiry. However, in a distributed setting with Redis replication, there's a race condition: if the master fails after the lock is acquired but before replicating to the replica, a second client can acquire the same lock. For stronger guarantees, I'd use Redlock, which acquires the lock on N/2+1 independent Redis nodes. The tradeoff is latency: Redlock requires round trips to 3-5 nodes versus 1 for a single-node lock, adding roughly 5-10ms. For our use case with lock durations of 30 seconds, that overhead is acceptable. At 10x scale with thousands of lock acquisitions per second, I'd shard locks by resource ID across multiple Redis clusters and consider switching to ZooKeeper or etcd for stronger consistency guarantees, at the cost of higher operational complexity. Each lock should include a fencing token, an incrementing number that downstream systems can use to reject stale operations.",
+    "question_type": "coding_discussion",
+    "expected_rules": [],
+    "expected_score_range": [78, 98],
+    "notes": "Requirements stated, multiple approaches with tradeoffs, latency numbers, scale thinking, fencing token depth"
+  },
+
+  {
+    "id": "edge_rambling_01",
+    "question": "Tell me about a time you led a project.",
+    "answer": "Sure, so, there was this one time at my previous company where we were working on this really important project. It was a big deal for the company. So basically what happened was, we had this legacy system that was causing a lot of problems. And the problems were like, it was slow, and it crashed sometimes, and people were complaining about it. So my manager asked me to look into it. And I started by looking at the code, and the code was really messy. Like, it was written years ago by someone who had already left the company. And there was no documentation. So I spent a few weeks just trying to understand what the code was doing. And then I talked to some other engineers about it. And they had different opinions about what we should do. Some people wanted to rewrite it from scratch and some people wanted to just fix the bugs. And then we also had to think about the timeline because there was a product launch coming up. And so I went to my manager and said we should probably do a partial rewrite. And then we started working on it. And it took a while. And there were a lot of challenges along the way. Like, we found more bugs than we expected. And we had to do a lot of testing. But eventually we finished it and it was better than before. The system was more stable and people were happier with it.",
+    "question_type": "behavioral",
+    "expected_rules": ["rambling", "missing_metrics", "result_not_specific", "no_tradeoff"],
+    "expected_score_range": [20, 45],
+    "notes": "Extremely long and meandering, no specific numbers, vague outcome, no tradeoff discussion"
+  },
+  {
+    "id": "edge_filler_heavy_01",
+    "question": "How did you handle a production outage?",
+    "answer": "So, um, basically, we had this, uh, production issue where, like, the service was, you know, throwing errors. And um, I, like, basically looked at the logs and, uh, you know, found that, like, the database connection pool was, um, basically exhausted. So I, uh, like, increased the pool size and, um, basically, you know, restarted the service. And, uh, like, it sort of came back. Um, yeah, basically it was, you know, a connection leak that was, like, sort of causing the issue.",
+    "question_type": "behavioral",
+    "expected_rules": ["filler_spike", "missing_metrics", "result_not_specific", "no_tradeoff"],
+    "expected_score_range": [15, 40],
+    "notes": "Extremely heavy filler words throughout, no quantifiable data, vague resolution"
+  },
+  {
+    "id": "edge_no_ownership_pure_we",
+    "question": "Tell me about a significant technical achievement.",
+    "answer": "We migrated our entire platform from a monolith to microservices. We evaluated different architectures and we chose an event-driven approach. We set up Kafka for message passing between services. We containerized everything with Docker and deployed to Kubernetes. We wrote integration tests for all the service boundaries. We rolled it out over three months. We reduced deployment time from 2 hours to 15 minutes and we reduced incidents by 60%. The team was really proud of what we accomplished together.",
+    "question_type": "behavioral",
+    "expected_rules": ["no_ownership"],
+    "expected_score_range": [35, 58],
+    "notes": "Every sentence uses we, never I. Has some metrics and structure but impossible to tell the candidate's personal contribution"
+  },
+  {
+    "id": "edge_off_topic_vague",
+    "question": "Describe a time you had to make a difficult technical decision.",
+    "answer": "I think making difficult decisions is really about having good communication and being open to feedback. In my career, I've always valued collaboration and making sure everyone is heard. I believe that the best technical decisions come from diverse perspectives. At my last company, we had a great culture of openness and I really thrived in that environment. I'm looking for a similar culture here. I'm passionate about technology and I love learning new things.",
+    "question_type": "behavioral",
+    "expected_rules": ["no_star_structure", "missing_result", "missing_metrics", "no_tradeoff", "shallow_followup"],
+    "expected_score_range": [5, 25],
+    "notes": "Never actually answers the question, generic platitudes, no specific situation or action"
+  },
+  {
+    "id": "edge_very_short",
+    "question": "Tell me about a time you dealt with ambiguity.",
+    "answer": "I had to figure out requirements for a feature that wasn't well defined. I talked to stakeholders and built it. It worked out.",
+    "question_type": "behavioral",
+    "expected_rules": ["no_star_structure", "missing_result", "result_not_specific", "missing_metrics", "no_tradeoff"],
+    "expected_score_range": [5, 30],
+    "notes": "Extremely brief, no detail whatsoever, no metrics, no structure, no specifics"
+  }
+]

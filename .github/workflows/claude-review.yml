@@ -1,0 +1,64 @@
+name: Claude PR Review
+
+# Automatically reviews every PR to main using Claude.
+# Also responds when someone comments "@claude" on a PR.
+#
+# Required GitHub secret: ANTHROPIC_API_KEY
+
+on:
+  pull_request:
+    # Only review when PR is first opened or marked ready (not every push)
+    # To re-trigger: comment "@claude review" on the PR
+    types: [opened, ready_for_review]
+    branches: [main]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    name: Claude code review
+    runs-on: ubuntu-latest
+    # Only run on PRs (issue_comment also fires on issues — skip those)
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       contains(github.event.comment.body, '@claude'))
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: claude-haiku-4-5-20251001
+          # On PR open/update: automatic review
+          # On @claude comment: respond to the comment
+          direct_prompt: |
+            You are a senior engineer reviewing a pull request for InterviewCraft,
+            a deliberate-practice interview training app.
+
+            Review this PR for:
+            1. **Security** — hardcoded secrets, missing auth checks, SQL injection, XSS
+            2. **Correctness** — logic bugs, off-by-one errors, unhandled edge cases
+            3. **Architecture** — violations of project conventions (see below)
+            4. **Performance** — N+1 queries, missing indexes, unnecessary LLM calls
+
+            Project conventions to enforce:
+            - Python: type hints on all functions, structlog (never print/logging), no PII in logs
+            - TypeScript: no `any` types, Tailwind only (no inline styles)
+            - Every DB query fetching user data MUST filter by user_id
+            - Audio never written to disk
+            - All LLM costs logged to usage_logs table
+
+            Be concise. Only flag real issues — skip nitpicks.
+            Approve if no blockers found.

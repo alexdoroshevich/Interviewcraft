@@ -1,0 +1,29 @@
+name: Security scan (bandit)
+
+# Bandit scans Python source for common security issues (OWASP).
+# Runs on every PR that touches backend code.
+# High severity + high confidence = fail the build.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    paths:
+      - backend/**
+
+jobs:
+  bandit:
+    name: Python security scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: PyCQA/bandit-action@v1.0.1
+        with:
+          path: backend/app
+          severity: high
+          confidence: high
+          # Exclude test files — they intentionally use test credentials etc.
+          excluded_paths: backend/tests

@@ -1,0 +1,46 @@
+import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * Playwright E2E test config.
+ *
+ * Usage:
+ *   npm run test:e2e              — headless Chromium
+ *   npm run test:e2e:ui           — interactive UI mode
+ *   HEADED=1 npm run test:e2e     — headed browser
+ *
+ * Prerequisites:
+ *   1. npx playwright install chromium
+ *   2. Backend running on :8080, frontend on :3000
+ *   3. Demo user seeded: python scripts/seed_demo.py
+ */
+
+export default defineConfig({
+  testDir: "./e2e",
+  fullyParallel: false, // sessions have state — run sequentially
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? "github" : "html",
+
+  use: {
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+  },
+
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
+
+  // Start the dev server automatically when running locally
+  webServer: process.env.CI
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:3000",
+        reuseExistingServer: true,
+        timeout: 30_000,
+      },
+});

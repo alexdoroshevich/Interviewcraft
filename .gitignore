@@ -1,0 +1,72 @@
+# Secrets — NEVER commit real keys
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+htmlcov/
+.coverage
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# Docker
+*.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+
+# Gunicorn runtime files
+*.ctl
+gunicorn.pid
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Internal development docs (stay local only — Claude supervision/coordination)
+CLAUDE.md
+HANDOFF.md
+CLAUDE_CODE_PROMPTS.md
+SONNET_TASKS.md
+TOKEN_OPTIMIZATION.md
+WORKFLOW.md
+CHANGELOG.md
+INTERVIEWCRAFT_FINAL.md
+docs/SUPERVISION_CHECKPOINTS.md
+docs/IMPLEMENTATION_PLAN.md
+docs/UI_DESIGN_SPEC.md
+docs/devlog/
+
+# Build artifacts
+frontend/tsconfig.tsbuildinfo
+
+# Test artifacts
+frontend/.playwright-screenshots/
+
+# Private planning documents
+private/
+
+# Claude Code memory (personal, not shared)
+.claude/projects/
+.claude/settings.local.json

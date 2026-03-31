@@ -1,0 +1,63 @@
+{
+  "model": "sonnet",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(pytest:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(ruff check:*)",
+      "Bash(ruff format --check:*)",
+      "Bash(pip list:*)",
+      "Bash(pip show:*)",
+      "Bash(npm list:*)",
+      "Bash(alembic history:*)",
+      "Bash(alembic current:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker compose ps:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(drop database:*)",
+      "Bash(DROP DATABASE:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.py) cd backend 2>/dev/null && ruff check --fix \"$f\" 2>/dev/null && ruff format \"$f\" 2>/dev/null ;; esac; } || true",
+            "timeout": 15,
+            "statusMessage": "Auto-formatting Python..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Check if this file change violates any of these rules: 1) No print() in Python (must use structlog), 2) No console.log in TypeScript (must use proper logger), 3) No 'any' type in TypeScript, 4) No PII/transcripts/API keys in logs or comments, 5) No audio stored to disk. Tool input: $ARGUMENTS. If all rules pass, respond with this exact JSON: {\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"allow\"}}. If a rule is violated, respond with: {\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Describe the specific violation here\"}}.",
+            "timeout": 10,
+            "statusMessage": "Checking code quality rules..."
+          }
+        ]
+      }
+    ]
+  }
+}
