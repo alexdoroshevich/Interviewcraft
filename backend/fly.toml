@@ -1,11 +1,13 @@
 # fly.toml — InterviewCraft backend deployment on Fly.io
-# Deploy: fly deploy --config fly.toml
+# Lives in backend/ so Fly.io uses backend/ as Docker build context,
+# matching docker-compose (context: ./backend) and keeping COPY paths correct.
+# Deploy: flyctl deploy --config backend/fly.toml --remote-only
 
 app = "interviewcraft-api"
 primary_region = "iad"  # US East — closest to Anthropic/Deepgram endpoints
 
 [build]
-  dockerfile = "backend/Dockerfile"
+  dockerfile = "Dockerfile"
   dockerfile_target = "production"  # uses multi-stage build
 
 [env]
@@ -37,7 +39,7 @@ primary_region = "iad"  # US East — closest to Anthropic/Deepgram endpoints
   method = "GET"
   path = "/health"
 
-# Secrets (set via `fly secrets set KEY=value`):
+# Secrets (set via `fly secrets set KEY=value --app interviewcraft-api`):
 #   DATABASE_URL
 #   REDIS_URL
 #   SECRET_KEY
@@ -45,3 +47,7 @@ primary_region = "iad"  # US East — closest to Anthropic/Deepgram endpoints
 #   ANTHROPIC_API_KEY
 #   DEEPGRAM_API_KEY
 #   ELEVENLABS_API_KEY
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#   SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM_EMAIL
+#   CORS_ORIGINS
