@@ -1,0 +1,58 @@
+name: CodeQL security analysis
+
+# CodeQL performs deep semantic security analysis — finds injection paths,
+# auth bypass, tainted data flows that Bandit/Ruff cannot catch.
+# Free for all GitHub repos. Uploads results to GitHub Security tab.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Full scan every Monday at 03:00 UTC (off-peak)
+    - cron: "0 3 * * 1"
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+        include:
+          - language: python
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # Only flag real security issues — not style or quality
+          queries: security-and-quality
+          config: |
+            paths-ignore:
+              - frontend/node_modules
+              - backend/.venv
+              - "**/*.test.ts"
+              - "**/*.spec.ts"
+              - backend/tests
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          # Upload SARIF to GitHub Security tab
+          upload: true

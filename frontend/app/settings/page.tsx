@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { api, SettingsResponse, ApiError } from "@/lib/api";
@@ -74,7 +74,7 @@ const BYOK_PROVIDERS = [
   },
 ];
 
-export default function SettingsPage() {
+function SettingsContent() {
   useAuth();
 
   const router = useRouter();
@@ -524,5 +524,14 @@ export default function SettingsPage() {
         </p>
       </main>
     </>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary for Next.js static generation
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   );
 }

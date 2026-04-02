@@ -1,14 +1,12 @@
 name: Claude PR Review
 
-# Automatically reviews every PR to main using Claude.
+# Automatically reviews every PR to main using Claude Sonnet.
 # Also responds when someone comments "@claude" on a PR.
 #
 # Required GitHub secret: ANTHROPIC_API_KEY
 
 on:
   pull_request:
-    # Only review when PR is first opened or marked ready (not every push)
-    # To re-trigger: comment "@claude review" on the PR
     types: [opened, ready_for_review]
     branches: [main]
   issue_comment:
@@ -18,7 +16,6 @@ jobs:
   claude-review:
     name: Claude code review
     runs-on: ubuntu-latest
-    # Only run on PRs (issue_comment also fires on issues — skip those)
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' &&
@@ -36,29 +33,61 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@beta
+      - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          model: claude-haiku-4-5-20251001
-          # On PR open/update: automatic review
-          # On @claude comment: respond to the comment
-          direct_prompt: |
-            You are a senior engineer reviewing a pull request for InterviewCraft,
-            a deliberate-practice interview training app.
+          claude_args: "--model claude-sonnet-4-6 --max-turns 5"
+          prompt: |
+            You are a senior engineer performing a thorough code review for InterviewCraft,
+            a real-time voice AI interview training app (FastAPI backend + Next.js 14 frontend).
 
-            Review this PR for:
-            1. **Security** — hardcoded secrets, missing auth checks, SQL injection, XSS
-            2. **Correctness** — logic bugs, off-by-one errors, unhandled edge cases
-            3. **Architecture** — violations of project conventions (see below)
-            4. **Performance** — N+1 queries, missing indexes, unnecessary LLM calls
+            ## Your review process
+            1. Read the full diff carefully
+            2. Check every category below — do not skip any
+            3. Post inline comments on the exact lines with issues
+            4. Give a final summary: APPROVE, REQUEST CHANGES, or COMMENT
 
-            Project conventions to enforce:
-            - Python: type hints on all functions, structlog (never print/logging), no PII in logs
-            - TypeScript: no `any` types, Tailwind only (no inline styles)
-            - Every DB query fetching user data MUST filter by user_id
-            - Audio never written to disk
-            - All LLM costs logged to usage_logs table
+            ## Security (block PR if found)
+            - Hardcoded secrets, tokens, or API keys anywhere in code or comments
+            - Missing ownership check: every DB query on user data MUST filter by `user_id = current_user.id`
+            - Auth bypass: public endpoints that should be protected, or missing `CurrentUser` dependency
+            - SQL injection via raw string interpolation (use SQLAlchemy ORM or parameterized queries only)
+            - XSS: `dangerouslySetInnerHTML` without sanitization
+            - Audio or PII written to disk (audio must stay in-memory only)
+            - CORS origins set to wildcard `*` in production code
 
-            Be concise. Only flag real issues — skip nitpicks.
-            Approve if no blockers found.
+            ## Correctness (block PR if found)
+            - Logic bugs, incorrect conditionals, off-by-one errors
+            - Unhandled edge cases: None/null returns, empty lists, network failures
+            - Async mistakes: missing `await`, fire-and-forget without error handling
+            - Race conditions in state updates (especially React useState)
+            - DB patterns: missing `await db.commit()`, missing `await db.refresh(obj)` after insert
+            - JSONB mutations without full reassignment (SQLAlchemy won't detect in-place dict changes)
+
+            ## Architecture & conventions (comment, may block)
+            - Python: missing type hints on function parameters and return types
+            - Python: `print()` or `logging.*` used instead of `structlog`
+            - Python: PII, transcripts, or raw user answers in log fields
+            - TypeScript: `any` types (use proper interfaces or `unknown`)
+            - TypeScript: inline styles or CSS modules (Tailwind only)
+            - React: `useSearchParams()` without a Suspense boundary (Next.js 14 requirement)
+            - New npm packages added without justification
+            - New Python packages added without version pin in `pyproject.toml`
+
+            ## Performance (comment)
+            - N+1 queries: fetching related records inside a loop instead of a JOIN or bulk query
+            - Missing DB indexes on columns used in WHERE or ORDER BY clauses
+            - Unnecessary LLM calls that could be cached or skipped
+            - Large payloads sent over WebSocket without streaming
+
+            ## Cost logging (block if LLM call added without it)
+            - Every call to Anthropic/OpenAI/Deepgram/ElevenLabs MUST log to `usage_logs` table
+            - Required fields: user_id, provider, operation, input_tokens, output_tokens, cost_usd, latency_ms
+
+            ## Response format
+            - Be direct and specific — quote the exact line or block with the issue
+            - Explain WHY it is a problem and HOW to fix it with a concrete example
+            - Do not flag formatting or style that ruff/eslint already enforce automatically
+            - If a category is clean, say so in one line — do not pad
+            - End with exactly one verdict: ✅ APPROVED, ⚠️ NEEDS CHANGES, or 💬 COMMENT ONLY
