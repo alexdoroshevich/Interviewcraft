@@ -133,11 +133,11 @@ jobs:
           if [ "$ENV" = "staging" ]; then
             echo "config=fly.staging.toml" >> $GITHUB_OUTPUT
           else
-            echo "config=fly.toml" >> $GITHUB_OUTPUT
+            echo "config=backend/fly.toml" >> $GITHUB_OUTPUT
           fi
 
       - name: Deploy backend
-        # Run from repo root so --config path resolves correctly (fly.toml / fly.staging.toml are at root)
+        # Run from repo root; fly.staging.toml is at root, backend/fly.toml is in backend/
         run: flyctl deploy --config ${{ steps.config.outputs.config }} --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
