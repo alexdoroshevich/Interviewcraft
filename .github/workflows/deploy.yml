@@ -76,7 +76,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@v5 # TODO: pin to SHA — run: gh api repos/actions/setup-python/git/refs/tags/v5 | jq .object.sha
+      - uses: actions/setup-python@v6 # TODO: pin to SHA — run: gh api repos/actions/setup-python/git/refs/tags/v5 | jq .object.sha
         with:
           python-version: "3.13"
           cache: pip
