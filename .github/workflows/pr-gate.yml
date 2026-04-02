@@ -9,6 +9,15 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded runs on the same PR — always want feedback on latest push
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   # ── Backend: lint + type check + tests ───────────────────────────────────────
   backend-gate:
@@ -51,9 +60,9 @@ jobs:
       APP_ENV: test
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5 # TODO: pin to SHA
         with:
           python-version: "3.13"
           cache: pip
@@ -76,6 +85,16 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=80
 
+      - name: Backend summary
+        if: always()
+        run: |
+          echo "## Backend Gate" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Lint, types, and unit tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ One or more checks failed — see logs above" >> $GITHUB_STEP_SUMMARY
+          fi
+
   # ── Frontend: lint + type check + unit tests ─────────────────────────────────
   frontend-gate:
     name: Frontend gate (lint + types + tests)
@@ -85,9 +104,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version: "20"
           cache: "npm"
@@ -105,17 +124,27 @@ jobs:
       - name: Unit tests (vitest) — must pass
         run: npm test
 
+      - name: Frontend summary
+        if: always()
+        run: |
+          echo "## Frontend Gate" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ ESLint, TypeScript, and vitest passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ One or more checks failed — see logs above" >> $GITHUB_STEP_SUMMARY
+          fi
+
   # ── Pre-commit hooks (file hygiene + secrets detection) ──────────────────────
   pre-commit-gate:
     name: Pre-commit hooks
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5 # TODO: pin to SHA
         with:
           python-version: "3.13"
           cache: pip
@@ -131,17 +160,48 @@ jobs:
     name: PR description check
     runs-on: ubuntu-latest
 
+    permissions:
+      pull-requests: read
+
     steps:
       - name: Check PR has description
         uses: actions/github-script@v7
         with:
           script: |
             const body = context.payload.pull_request.body || "";
-            if (body.trim().length < 50) {
+
+            // Must have real content (not empty or just whitespace)
+            if (body.trim().length < 200) {
               core.setFailed(
-                "PR description is too short. Please fill in the pull request template " +
-                "(What does this PR do? + Checklist + How to test)."
+                "PR description is too short (under 200 chars). Fill in the pull request template."
               );
+              return;
+            }
+
+            // Must have required section headers
+            if (!body.includes("## What does this PR do?")) {
+              core.setFailed("Missing section '## What does this PR do?' in PR description.");
+              return;
+            }
+            if (!body.includes("## How to test")) {
+              core.setFailed("Missing section '## How to test' in PR description.");
+              return;
+            }
+
+            // Must not have unfilled placeholder comments from the template
+            // Match full placeholder strings so partial matches don't false-positive
+            const unfilled = [
+              "<!-- One paragraph summary: what changed and why -->",
+              "<!-- Steps for the reviewer to verify the change works -->",
+            ];
+            for (const placeholder of unfilled) {
+              if (body.includes(placeholder)) {
+                core.setFailed(
+                  `PR description still has an unfilled placeholder: "${placeholder}". ` +
+                  "Replace it with actual content."
+                );
+                return;
+              }
             }
 
   # ── Summary gate: all must pass ──────────────────────────────────────────────
@@ -157,15 +217,26 @@ jobs:
       - name: Check all gates
         run: |
           if [[ "${{ needs.backend-gate.result }}" != "success" ]]; then
-            echo "Backend gate failed"; exit 1
+            echo "❌ Backend gate failed"; exit 1
           fi
           if [[ "${{ needs.frontend-gate.result }}" != "success" ]]; then
-            echo "Frontend gate failed"; exit 1
+            echo "❌ Frontend gate failed"; exit 1
           fi
           if [[ "${{ needs.pre-commit-gate.result }}" != "success" ]]; then
-            echo "Pre-commit gate failed"; exit 1
+            echo "❌ Pre-commit gate failed"; exit 1
           fi
           if [[ "${{ needs.pr-metadata.result }}" != "success" ]]; then
-            echo "PR metadata check failed"; exit 1
+            echo "❌ PR metadata check failed"; exit 1
           fi
-          echo "All gates passed."
+          echo "✅ All gates passed — PR is ready to merge"
+
+      - name: Gate summary
+        if: always()
+        run: |
+          echo "## PR Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Gate | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.backend-gate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.frontend-gate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-commit | ${{ needs.pre-commit-gate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Metadata | ${{ needs.pr-metadata.result }} |" >> $GITHUB_STEP_SUMMARY

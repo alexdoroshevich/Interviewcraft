@@ -1,8 +1,8 @@
 name: Deploy
 
 # Triggers:
-#   push to main  → production  (fly app: interviewcraft)
-#   workflow_dispatch → manual deploy from GitHub UI
+#   push to main  → production  (fly app: interviewcraft-api)
+#   workflow_dispatch → manual deploy from GitHub UI with environment choice
 on:
   push:
     branches: [main]
@@ -10,6 +10,28 @@ on:
       - "backend/**"
       - "frontend/**"
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment target"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+      dry_run:
+        description: "Dry run — validate without deploying"
+        required: false
+        type: boolean
+        default: false
+
+# Prevent simultaneous deploys; queue instead of cancel to avoid partial deploys
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   # ── Run tests before deploy ───────────────────────────────────────────────────
@@ -53,12 +75,12 @@ jobs:
       APP_ENV: test
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@v5 # TODO: pin to SHA — run: gh api repos/actions/setup-python/git/refs/tags/v5 | jq .object.sha
         with:
           python-version: "3.13"
           cache: pip
+          cache-dependency-path: backend/pyproject.toml
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -70,21 +92,65 @@ jobs:
         run: mypy app/
 
       - name: Run tests
-        run: pytest -x -q -m "not integration and not nightly"
+        run: |
+          pytest -x -q \
+            -m "not integration and not nightly" \
+            --cov=app \
+            --cov-report=term-missing
 
-  # ── Deploy to PRODUCTION (push to main) ──────────────────────────────────────
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Backend Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "- Status: ✅ All checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: ❌ One or more checks failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ── Deploy to backend (push to main or manual dispatch) ──────────────────────
   deploy:
-    name: Deploy to production
+    name: Deploy backend (${{ github.event.inputs.environment || 'production' }})
     needs: test
     runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run != 'true'
+
+    permissions:
+      contents: read
+      deployments: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # Fly.io OIDC not yet available (April 2026) — FLY_API_TOKEN remains the standard
+      - uses: superfly/flyctl-actions/setup-flyctl@master # TODO: pin to SHA
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Select fly config
+        id: config
+        run: |
+          ENV="${{ github.event.inputs.environment || 'production' }}"
+          if [ "$ENV" = "staging" ]; then
+            echo "config=fly.staging.toml" >> $GITHUB_OUTPUT
+          else
+            echo "config=fly.toml" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Deploy backend to production
-        working-directory: backend
-        run: flyctl deploy --config fly.toml --remote-only
+      - name: Deploy backend
+        # Run from repo root so --config path resolves correctly (fly.toml / fly.staging.toml are at root)
+        run: flyctl deploy --config ${{ steps.config.outputs.config }} --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          ENV="${{ github.event.inputs.environment || 'production' }}"
+          echo "## Deploy Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: \`$ENV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "- Status: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: ❌ Deployment failed — check Fly.io dashboard" >> $GITHUB_STEP_SUMMARY
+          fi

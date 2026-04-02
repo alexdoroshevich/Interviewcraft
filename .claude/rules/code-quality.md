@@ -45,6 +45,24 @@ paths:
 - No single commit with 500+ changed lines — split into smaller commits
 - Never commit `.env`, API keys, or secrets
 
+## Pre-push Verification — MANDATORY
+**Never push changes that will produce visible failures in GitHub CI.** Before every `git push`, verify:
+
+1. **YAML syntax** — validate every new/modified `.github/workflows/*.yml` with:
+   `python -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" <file>`
+   A syntax error silently breaks the entire workflow.
+
+2. **Action API compatibility** — when using `some-action@version`, verify input field names match that exact version. `@beta` vs `@v1` field names differ (e.g. `direct_prompt` → `prompt`, `model` → `claude_args`). Check the action's README.
+
+3. **Conflict pre-check** — before pushing a branch that touches files also on another open branch or recently merged to main, run:
+   `git fetch origin && git diff origin/main -- <file>` to surface conflicts before they become GitHub merge conflicts.
+
+4. **File path correctness** — trace every path in workflows: `working-directory` + relative config path must resolve to a real file in the repo. Check `fly.toml`, `vercel.json`, `pyproject.toml` locations explicitly.
+
+5. **Build output alignment** — if changing anything that affects build output location (next.config.mjs `output` mode, Dockerfile paths, Vercel settings), verify the deployment system will find the output at the new location.
+
+6. **New workflow dry-run** — for any new workflow file, mentally simulate a full run: trigger event → permissions → steps → expected output. If it's a reviewer/bot action, verify it has the correct tool permissions and won't hit turn limits.
+
 ## Pull Requests — MANDATORY
 - **NEVER open a PR with empty or placeholder template fields** — this has been corrected multiple times
 - Every PR body must fill ALL fields in `.github/pull_request_template.md`:

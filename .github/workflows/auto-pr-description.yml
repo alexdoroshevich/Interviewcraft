@@ -1,0 +1,53 @@
+name: Auto-fill PR description
+
+# When a PR is opened with an empty description (or just the unfilled template),
+# automatically populate it with the template so the author only has to fill in
+# the blanks rather than copy-paste the template manually.
+#
+# This fires ONLY on the opened event — it never overwrites a description that
+# has already been edited.
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  fill-description:
+    name: Auto-fill empty PR description
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Fill template if description is empty or unfilled
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || "";
+
+            // Consider the description "unfilled" if it's empty, very short,
+            // or still contains the placeholder comment from the template.
+            const isUnfilled =
+              body.trim().length < 100 ||
+              body.includes("<!-- One paragraph summary: what changed and why -->");
+
+            if (!isUnfilled) {
+              console.log("PR already has a description — skipping auto-fill.");
+              return;
+            }
+
+            const fs = require("fs");
+            const template = fs.readFileSync(".github/pull_request_template.md", "utf8");
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body: template,
+            });
+
+            console.log("Auto-filled PR description with template.");

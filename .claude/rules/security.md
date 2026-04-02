@@ -37,4 +37,15 @@ paths:
 - XSS: mitigated by React's default escaping + Next.js CSP headers
 - CSRF: mitigated by JWT Bearer tokens (not cookies)
 - Bandit runs in CI for Python security scanning
+- CodeQL runs on every PR + weekly for deep semantic analysis (Python + TypeScript)
 - gitleaks runs in pre-commit for secret detection
+
+## GitHub Actions Supply Chain Security
+- **SHA pinning is the standard** — `@v4` tags are mutable and can be hijacked
+  (March 2025: tj-actions/changed-files compromise affected 23,000+ repos via tag poisoning)
+- All actions should be pinned to full 40-char commit SHA with a version comment:
+  `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2`
+- Dependabot is configured to auto-PR action updates weekly — review before merging
+- After any Dependabot action update: manually convert the new tag to SHA
+- Never use `@master` or `@main` for third-party actions — unpinnable
+- GitHub organization policy can now enforce SHA-only actions (Settings → Actions → Policy)

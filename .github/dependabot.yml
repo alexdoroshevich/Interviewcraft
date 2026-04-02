@@ -1,0 +1,59 @@
+version: 2
+updates:
+  # Keep GitHub Actions up to date automatically.
+  # PRs created weekly — review before merging (do NOT auto-merge; verify SHA after update).
+  # Note: after merging a Dependabot PR, manually pin the new version to a full
+  # commit SHA for supply-chain security (see docs/adr/ on security hardening).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Python backend dependencies
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Do not auto-bump major versions — our critical pins must stay:
+    # deepgram-sdk>=4,<5 | bcrypt>=3.2,<4 | anthropic>=0.40,<1
+    ignore:
+      - dependency-name: "deepgram-sdk"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "bcrypt"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "anthropic"
+        update-types: ["version-update:semver-major"]
+
+  # Node / frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    ignore:
+      # Next.js major upgrades require manual migration
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]

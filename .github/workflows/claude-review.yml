@@ -1,12 +1,14 @@
 name: Claude PR Review
 
-# Automatically reviews every PR to main using Claude Sonnet.
+# Automatically reviews every PR to main using Claude.
 # Also responds when someone comments "@claude" on a PR.
 #
 # Required GitHub secret: ANTHROPIC_API_KEY
 
 on:
   pull_request:
+    # Only review when PR is first opened or marked ready (not every push)
+    # To re-trigger: comment "@claude review" on the PR
     types: [opened, ready_for_review]
     branches: [main]
   issue_comment:
@@ -16,6 +18,7 @@ jobs:
   claude-review:
     name: Claude code review
     runs-on: ubuntu-latest
+    # Only run on PRs (issue_comment also fires on issues — skip those)
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' &&
@@ -37,13 +40,19 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--model claude-sonnet-4-6 --max-turns 5"
+          # 15 turns is enough for a thorough review of any realistic PR size.
+          # Do NOT lower below 10 — the reviewer hits max-turns on multi-file PRs.
+          claude_args: "--model claude-sonnet-4-6 --max-turns 15"
           prompt: |
             You are a senior engineer performing a thorough code review for InterviewCraft,
             a real-time voice AI interview training app (FastAPI backend + Next.js 14 frontend).
 
+            IMPORTANT: Work only from the PR diff provided to you. Do NOT attempt to
+            read files, run shell commands, or access the filesystem — you do not have
+            those permissions in this environment. All context you need is in the diff.
+
             ## Your review process
-            1. Read the full diff carefully
+            1. Read the full PR diff carefully
             2. Check every category below — do not skip any
             3. Post inline comments on the exact lines with issues
             4. Give a final summary: APPROVE, REQUEST CHANGES, or COMMENT
@@ -87,7 +96,7 @@ jobs:
 
             ## Response format
             - Be direct and specific — quote the exact line or block with the issue
-            - Explain WHY it is a problem and HOW to fix it with a concrete example
+            - Explain WHY it is a problem and HOW to fix it (in words, no code blocks)
             - Do not flag formatting or style that ruff/eslint already enforce automatically
             - If a category is clean, say so in one line — do not pad
             - End with exactly one verdict: ✅ APPROVED, ⚠️ NEEDS CHANGES, or 💬 COMMENT ONLY
