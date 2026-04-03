@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { api, ShareCardPublicResponse, ApiError } from "@/lib/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -41,18 +42,19 @@ function ReadinessRing({ score }: { score: number }) {
   );
 }
 
-export default function SharePage({ params }: { params: { token: string } }) {
+export default function SharePage() {
+  const { token } = useParams<{ token: string }>();
   const [card, setCard] = useState<ShareCardPublicResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.share
-      .getCard(params.token)
+      .getCard(token)
       .then(setCard)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Card not found"))
       .finally(() => setLoading(false));
-  }, [params.token]);
+  }, [token]);
 
   if (loading) {
     return (
