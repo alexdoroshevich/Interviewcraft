@@ -53,7 +53,7 @@ Includes 10 pre-built sessions, skill graph, story bank, and negotiation history
 | Layer | Choice | Why |
 |---|---|---|
 | Backend | FastAPI + Python 3.13 | Async, fast, typed |
-| Frontend | Next.js 14 + App Router + Tailwind | App Router for layouts |
+| Frontend | Next.js 15 + App Router + Tailwind | App Router for layouts |
 | Voice | Pipecat + Deepgram Nova-2 + Claude Sonnet + ElevenLabs | Open-source orchestration |
 | Database | PostgreSQL 16 (JSONB skill graph) | Flexible schema, no migrations for new skills |
 | Cache | Redis 7 | Rate limiting + session state |
@@ -223,9 +223,9 @@ git push origin feature/my-feature
 
 | Branch | Backend target (Fly.io) | Frontend target (Vercel) | Secrets needed |
 |--------|------------------------|-------------------------|----------------|
-| `dev` | `interviewcraft-dev.fly.dev` | Preview deployment (auto) | `FLY_API_TOKEN_DEV` |
-| `stage` | `interviewcraft-staging.fly.dev` | Preview deployment (auto) | `FLY_API_TOKEN_STAGING` |
-| `main` | `interviewcraft-api.fly.dev` | Production (auto) | `FLY_API_TOKEN` |
+| `dev` | Dev Fly.io app | Preview deployment (auto) | `FLY_API_TOKEN_DEV` |
+| `stage` | Staging Fly.io app | Preview deployment (auto) | `FLY_API_TOKEN_STAGING` |
+| `main` | Production Fly.io app | Production (auto) | `FLY_API_TOKEN` |
 
 Manual deploys available via **GitHub -> Actions -> Deploy -> Run workflow**.
 
@@ -260,60 +260,32 @@ The app is split across two hosting providers because they serve different needs
 
 ---
 
-## Step-by-Step: From Code to Live Website
+## Deployment
 
-### One-time setup (do this once)
+The app deploys to **Fly.io** (backend) and **Vercel** (frontend). See the architecture diagram above for the split rationale.
 
-#### 1. Deploy frontend to Vercel (5 minutes, free)
+### One-time setup
 
+**Frontend (Vercel):**
+1. Import the repo on [vercel.com](https://vercel.com) — set Root Directory to `frontend`
+2. Add environment variable: `NEXT_PUBLIC_API_URL=https://<your-fly-app>.fly.dev`
+3. Every push to `main` auto-deploys. Every PR gets a preview URL.
+
+**Backend (Fly.io):**
 ```bash
-# Option A: Via Vercel website (recommended)
-# 1. Go to https://vercel.com and sign in with GitHub
-# 2. Click "Add New Project" -> Import your interviewcraft repo
-# 3. Set these settings:
-#    - Framework Preset: Next.js (auto-detected)
-#    - Root Directory: frontend
-#    - Build Command: npm run build
-#    - Output Directory: .next
-# 4. Add environment variable:
-#    NEXT_PUBLIC_API_URL = https://interviewcraft-api.fly.dev
-# 5. Click "Deploy"
-#
-# Vercel will auto-deploy on every push to main.
-# Preview URLs are created automatically for every PR and branch push.
-
-# Option B: Via Vercel CLI
-npm i -g vercel
-cd frontend
-vercel link          # connect to your Vercel project
-vercel env add NEXT_PUBLIC_API_URL   # set API URL for each environment
-vercel --prod        # deploy to production
-```
-
-After this, **every git push auto-deploys the frontend**. No further action needed.
-
-#### 2. Deploy backend to Fly.io
-
-```bash
-# Install flyctl
-# macOS/Linux:
-curl -L https://fly.io/install.sh | sh
-# Windows:
-powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
-
+# Install flyctl: https://fly.io/docs/hands-on/install-flyctl/
 flyctl auth login
 
-# Create all three apps
-flyctl apps create interviewcraft-dev
-flyctl apps create interviewcraft-staging
-flyctl apps create interviewcraft-api
+# Create apps for each environment (dev / staging / production)
+flyctl apps create <your-app-dev>
+flyctl apps create <your-app-staging>
+flyctl apps create <your-app>
 
-# Create a managed Postgres database (or use Supabase/Neon)
-flyctl postgres create --name interviewcraft-db --region iad
-flyctl postgres attach interviewcraft-db --app interviewcraft-api
-# This auto-sets DATABASE_URL secret on the app
+# Create and attach a Postgres database
+flyctl postgres create --name <your-db>
+flyctl postgres attach <your-db> --app <your-app>
 
-# Set secrets for each environment
+# Set required secrets (see .env.example for the full list)
 flyctl secrets set \
   SECRET_KEY="$(openssl rand -hex 32)" \
   JWT_SECRET_KEY="$(openssl rand -hex 32)" \
@@ -321,99 +293,36 @@ flyctl secrets set \
   DEEPGRAM_API_KEY="..." \
   ELEVENLABS_API_KEY="..." \
   REDIS_URL="redis://..." \
-  --app interviewcraft-api
+  --app <your-app>
 
-# Repeat for staging and dev (can use lower-tier keys)
-flyctl secrets set ... --app interviewcraft-staging
-flyctl secrets set ... --app interviewcraft-dev
-
-# Initial deploy (subsequent deploys are automatic via GitHub Actions)
-flyctl deploy --config fly.toml
-flyctl deploy --config fly.staging.toml
-flyctl deploy --config fly.dev.toml
+# Initial deploy — subsequent deploys run automatically via GitHub Actions
+flyctl deploy --config backend/fly.toml
 ```
 
-#### 3. Add GitHub Secrets
+**GitHub Secrets** (Settings → Secrets and variables → Actions):
 
-Go to **GitHub -> repo Settings -> Secrets and variables -> Actions** and add:
+| Secret | Value |
+|--------|-------|
+| `FLY_API_TOKEN` | `flyctl tokens create deploy --app <your-app>` |
+| `FLY_API_TOKEN_STAGING` | `flyctl tokens create deploy --app <your-app-staging>` |
+| `FLY_API_TOKEN_DEV` | `flyctl tokens create deploy --app <your-app-dev>` |
 
-| Secret | Value | Used by |
-|--------|-------|---------|
-| `FLY_API_TOKEN` | `flyctl tokens create deploy --app interviewcraft-api` | Production deploy |
-| `FLY_API_TOKEN_STAGING` | `flyctl tokens create deploy --app interviewcraft-staging` | Staging deploy |
-| `FLY_API_TOKEN_DEV` | `flyctl tokens create deploy --app interviewcraft-dev` | Dev deploy |
-
-#### 4. Configure branch protection
-
-Go to **GitHub -> repo Settings -> Branches -> Add rule** for each branch:
-
-| Branch | Require PR | Approvals | Code Owners | Required status check | No bypass |
-|--------|-----------|-----------|-------------|----------------------|-----------|
-| `main` | Yes | 1 | Yes | `All gates passed` | Yes |
-| `stage` | Yes | 1 | Yes | `All gates passed` | No |
-| `dev` | Yes | No | No | `All gates passed` | No |
-
-#### 5. Run database migrations on Fly.io
-
+**Run database migrations:**
 ```bash
-# SSH into the app and run migrations
-flyctl ssh console --app interviewcraft-api
+flyctl ssh console --app <your-app>
 cd /app && python -m alembic upgrade head
-exit
 ```
 
-### Daily workflow (after setup)
+### Daily workflow
 
-After the one-time setup, your workflow is simply:
+After setup, you never run deploy commands manually:
 
 ```bash
-# 1. Write code on a feature branch
-git checkout dev && git pull
 git checkout -b feature/my-feature
 # ... make changes ...
 git commit -m "feat: my feature"
 git push origin feature/my-feature
-
-# 2. Open PR against dev
-#    -> pr-gate.yml runs automatically
-#    -> Vercel creates a preview URL for the frontend
-#    -> Fix anything that fails, push again
-#    -> Merge when gates pass
-
-# 3. Push lands on dev
-#    -> Backend auto-deploys to interviewcraft-dev.fly.dev
-#    -> Frontend auto-deploys to preview on Vercel
-#    -> Test at your dev URLs
-
-# 4. Promote: open PR dev -> stage, merge
-#    -> Auto-deploys to staging URLs
-#    -> QA testing
-
-# 5. Promote: open PR stage -> main, merge
-#    -> Auto-deploys to production
-#    -> Live at your production URLs
-
-# That's it. You never run deploy commands manually again.
-```
-
-### Your live URLs (after setup)
-
-| Environment | Backend API | Frontend |
-|-------------|------------|---------|
-| Dev | `https://interviewcraft-dev.fly.dev` | Vercel preview URL (auto-generated) |
-| Staging | `https://interviewcraft-staging.fly.dev` | Vercel preview URL (auto-generated) |
-| Production | `https://interviewcraft-api.fly.dev` | `https://interviewcraft.vercel.app` (or custom domain) |
-
-### Custom domain (optional)
-
-```bash
-# Backend: add custom domain on Fly.io
-flyctl certs create api.interviewcraft.com --app interviewcraft-api
-# Add CNAME record: api.interviewcraft.com -> interviewcraft-api.fly.dev
-
-# Frontend: add custom domain on Vercel
-# Go to Vercel dashboard -> Settings -> Domains -> Add "interviewcraft.com"
-# Add CNAME record: interviewcraft.com -> cname.vercel-dns.com
+# Open PR → CI gates run → merge → auto-deploys
 ```
 
 ---
