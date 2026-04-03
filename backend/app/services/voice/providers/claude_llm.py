@@ -23,7 +23,7 @@ from app.services.voice.types import LLMMetrics
 logger = structlog.get_logger(__name__)
 
 _SONNET = "claude-sonnet-4-6"
-_HAIKU = "claude-haiku-4-5-20251001"
+_HAIKU = "claude-haiku-4-5"
 
 
 class ClaudeLLMProvider(LLMProvider):

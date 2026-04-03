@@ -40,6 +40,7 @@ from app.schemas.session import (
 from app.services.auth.dependencies import CurrentUser
 from app.services.auth.jwt_utils import decode_token
 from app.services.byok import decrypt_byok_keys
+from app.services.memory.loader import load_memory_context
 from app.services.voice.pipeline import VoicePipeline
 from app.services.voice.prompts import build_candidate_context_block
 from app.services.voice.provider_factory import ProviderFactory
@@ -281,7 +282,7 @@ async def analyze_jd(
 
     try:
         response = await client.messages.create(  # type: ignore[call-overload]
-            model="claude-haiku-4-5-20251001",
+            model="claude-haiku-4-5",
             max_tokens=1024,
             system=_JD_SYSTEM,
             tools=[_JD_TOOL_SCHEMA],  # type: ignore[list-item]
@@ -448,6 +449,41 @@ async def get_session_metrics(
     }
 
 
+# -- GET /sessions/{id}/report
+
+
+@router.get("/{session_id}/report")
+async def get_session_report(
+    session_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Generate and stream a PDF coaching report for a completed session.
+
+    Returns the PDF as application/pdf. Result is cached 24h in Redis.
+    """
+    from fastapi.responses import Response as FResponse
+
+    from app.services.report.generator import download_report_pdf, generate_session_pdf
+
+    try:
+        file_id = await generate_session_pdf(
+            session_id=session_id,
+            user_id=current_user.id,
+            api_key=settings.anthropic_api_key,
+            db=db,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+    pdf_bytes = await download_report_pdf(file_id, settings.anthropic_api_key)
+    return FResponse(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="report-{session_id}.pdf"'},
+    )
+
+
 # ── WebSocket voice endpoint ───────────────────────────────────────────────────
 
 
@@ -514,9 +550,17 @@ async def voice_websocket(
             )
             company_questions = [q.text for q in q_result.scalars().all()]
 
-        # Build candidate context from resume (if user has uploaded one)
+        # Build candidate context from resume + cross-session memory
         resume_data = ((user.profile or {}).get("resume")) or {}
         candidate_context = build_candidate_context_block(resume_data) or None
+
+        memory_block = await load_memory_context(
+            db=db,
+            user_id=user.id,
+            api_key=settings.anthropic_api_key or None,
+        )
+        if memory_block:
+            candidate_context = (candidate_context or "") + "\n\n" + memory_block
 
         pipeline = VoicePipeline(
             providers=providers,

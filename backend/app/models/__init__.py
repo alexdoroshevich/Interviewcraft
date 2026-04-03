@@ -15,6 +15,7 @@ from app.models.skill_graph_node import SKILL_CATEGORIES, SkillGraphNode, SkillT
 from app.models.transcript_word import TranscriptWord
 from app.models.usage_log import UsageLog
 from app.models.user import User, UserRole
+from app.models.user_memory import UserMemory
 
 __all__ = [
     "Base",
@@ -34,4 +35,5 @@ __all__ = [
     "SessionMetrics",
     "UsageLog",
     "ShareCard",
+    "UserMemory",
 ]

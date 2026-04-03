@@ -80,7 +80,7 @@ def test_balanced_profile_splits_primary_secondary() -> None:
     """Balanced: primary (Sonnet) for voice_llm, secondary (Haiku) for scoring."""
     settings = _mock_settings()
     primary = _make_provider_mock("claude-sonnet-4-6")
-    secondary = _make_provider_mock("claude-haiku-4-5-20251001")
+    secondary = _make_provider_mock("claude-haiku-4-5")
 
     call_count = 0
 
@@ -112,7 +112,7 @@ def test_balanced_profile_splits_primary_secondary() -> None:
 def test_budget_profile_uses_deepgram_tts() -> None:
     """Budget profile: Haiku everywhere + Deepgram Aura TTS."""
     settings = _mock_settings()
-    haiku = _make_provider_mock("claude-haiku-4-5-20251001")
+    haiku = _make_provider_mock("claude-haiku-4-5")
     dg_tts = MagicMock()
 
     with (
@@ -136,7 +136,7 @@ def test_budget_profile_aura_voice_id_passed_to_deepgram_tts() -> None:
         patch(_PATCH_DEEPGRAM_STT, return_value=MagicMock()),
         patch(_PATCH_ELEVENLABS, return_value=MagicMock()),
         patch(_PATCH_DEEPGRAM_TTS, return_value=MagicMock()) as mock_dg_tts,
-        patch(_PATCH_CLAUDE, return_value=_make_provider_mock("claude-haiku-4-5-20251001")),
+        patch(_PATCH_CLAUDE, return_value=_make_provider_mock("claude-haiku-4-5")),
     ):
         ProviderFactory.create("budget", settings, voice_id="aura-zeus-en")
 
@@ -291,7 +291,7 @@ def test_non_aura_voice_id_not_passed_to_deepgram_tts() -> None:
         patch(_PATCH_DEEPGRAM_STT, return_value=MagicMock()),
         patch(_PATCH_ELEVENLABS, return_value=MagicMock()),
         patch(_PATCH_DEEPGRAM_TTS, return_value=MagicMock()) as mock_dg_tts,
-        patch(_PATCH_CLAUDE, return_value=_make_provider_mock("claude-haiku-4-5-20251001")),
+        patch(_PATCH_CLAUDE, return_value=_make_provider_mock("claude-haiku-4-5")),
     ):
         ProviderFactory.create("budget", settings, voice_id="rachel-voice-id")
 

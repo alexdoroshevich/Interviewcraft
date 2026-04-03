@@ -1,5 +1,7 @@
 {
   "model": "sonnet",
+  "effortLevel": "high",
+  "disableSkillShellExecution": true,
   "permissions": {
     "allow": [
       "Read",
@@ -10,38 +12,59 @@
       "Bash(git log:*)",
       "Bash(git branch:*)",
       "Bash(git show:*)",
+      "Bash(git fetch:*)",
       "Bash(pytest:*)",
       "Bash(npm run lint:*)",
       "Bash(npm run type-check:*)",
       "Bash(npx tsc --noEmit:*)",
       "Bash(ruff check:*)",
-      "Bash(ruff format --check:*)",
+      "Bash(ruff format:*)",
       "Bash(pip list:*)",
       "Bash(pip show:*)",
       "Bash(npm list:*)",
       "Bash(alembic history:*)",
       "Bash(alembic current:*)",
       "Bash(docker ps:*)",
-      "Bash(docker compose ps:*)"
+      "Bash(docker compose ps:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
+      "Bash(npx repomix:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(git push --force:*)",
       "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git checkout -- .:*)",
       "Bash(drop database:*)",
-      "Bash(DROP DATABASE:*)"
+      "Bash(DROP DATABASE:*)",
+      "Bash(DROP TABLE:*)",
+      "Bash(drop table:*)",
+      "Bash(TRUNCATE:*)",
+      "Bash(truncate:*)"
     ]
   },
   "hooks": {
-    "PostToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.py) cd backend 2>/dev/null && ruff check --fix \"$f\" 2>/dev/null && ruff format \"$f\" 2>/dev/null ;; esac; } || true",
-            "timeout": 15,
-            "statusMessage": "Auto-formatting Python..."
+            "command": "cat \"$CLAUDE_PROJECT_DIR/.claude/rules/architecture.md\" \"$CLAUDE_PROJECT_DIR/.claude/rules/code-quality.md\" \"$CLAUDE_PROJECT_DIR/.claude/rules/security.md\" 2>/dev/null | head -200 || true",
+            "timeout": 5,
+            "statusMessage": "Loading project context..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && git status --short 2>/dev/null | { read -r line; if [ -n \"$line\" ]; then echo '{\"systemMessage\": \"Warning: uncommitted changes exist. Consider committing before ending the session.\"}'; fi; } || true",
+            "timeout": 5,
+            "statusMessage": "Checking for uncommitted changes..."
           }
         ]
       }
@@ -55,6 +78,77 @@
             "prompt": "Check if this file change violates any of these rules: 1) No print() in Python (must use structlog), 2) No console.log in TypeScript (must use proper logger), 3) No 'any' type in TypeScript, 4) No PII/transcripts/API keys in logs or comments, 5) No audio stored to disk. Tool input: $ARGUMENTS. If all rules pass, respond with this exact JSON: {\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"allow\"}}. If a rule is violated, respond with: {\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Describe the specific violation here\"}}.",
             "timeout": 10,
             "statusMessage": "Checking code quality rules..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | python3 -c \"import sys,json; d=json.loads(sys.stdin.read()); print(d.get('tool_input',{}).get('command',''))\" 2>/dev/null || echo ''); if echo \"$cmd\" | grep -qE '^git\\s+push\\s+(origin\\s+)?(main|master)\\b'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Direct push to main/master is blocked. Create a feature branch and open a PR instead.\"}}'; fi",
+            "timeout": 5,
+            "statusMessage": "Checking branch guard..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.py) cd \"$CLAUDE_PROJECT_DIR/backend\" 2>/dev/null && ruff check --fix \"$f\" 2>/dev/null && ruff format \"$f\" 2>/dev/null ;; esac; } || true",
+            "timeout": 15,
+            "statusMessage": "Auto-formatting Python..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/scripts/auto-pr.sh\" 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Checking if PR needs to be created..."
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Context compacted. Critical reminders: 1) JSONB mutation: always reassign whole dict. 2) asyncpg: CAST(:param AS jsonb) never ::jsonb. 3) Audio never to disk. 4) Evidence = {start_ms, end_ms} spans. 5) user_id filter on every query. 6) structlog only, never print(). 7) Next migration: 015.\"}'",
+            "timeout": 5,
+            "statusMessage": "Re-injecting critical rules after compaction..."
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "denied=$(cat 2>/dev/null); tool=$(echo \"$denied\" | python3 -c \"import sys,json; d=json.loads(sys.stdin.read()); print(d.get('tool_name','unknown'))\" 2>/dev/null || echo 'unknown'); echo \"{\\\"systemMessage\\\": \\\"Action blocked by auto mode classifier: $tool. If this is legitimate, explain why and retry — or ask the user to approve it in /permissions.\\\"}\"",
+            "timeout": 5,
+            "statusMessage": "Logging denied action..."
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Task created. Reminders before starting: next migration is 015, use CAST(:x AS jsonb) not ::jsonb, user_id filter on every query, structlog not print().\"}'",
+            "timeout": 3,
+            "statusMessage": "Injecting task reminders..."
           }
         ]
       }

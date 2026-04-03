@@ -40,7 +40,7 @@ from app.services.voice.costs import calc_anthropic_cost
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/negotiation", tags=["negotiation"])
 
-_HAIKU = "claude-haiku-4-5-20251001"
+_HAIKU = "claude-haiku-4-5"
 
 # Hidden max budget: 15% above the stated offer
 _HIDDEN_MAX_MULTIPLIER = 1.15

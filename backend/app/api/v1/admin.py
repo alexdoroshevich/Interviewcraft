@@ -4,6 +4,7 @@ GET  /api/v1/admin/metrics                  — requires admin role.
 GET  /api/v1/admin/questions/pending        — list pending contributions.
 POST /api/v1/admin/questions/{id}/approve   — approve a question.
 POST /api/v1/admin/questions/{id}/reject    — reject a question.
+POST /api/v1/admin/memory/consolidate       — trigger Batch API memory consolidation.
 
 Aggregates:
 - Voice pipeline latency p50/p95 (session_metrics, last 7 days)
@@ -261,3 +262,32 @@ async def reject_question(
     await db.commit()
     logger.info("admin.question_rejected", question_id=str(question_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# -- Memory consolidation
+
+
+@router.post("/memory/consolidate", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_memory_consolidation(
+    user_id: uuid.UUID,
+    _admin: CurrentAdmin,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Manually trigger Batch API memory consolidation for a user."""
+    from app.config import settings as cfg
+    from app.models.user_memory import UserMemory
+    from app.services.memory.builder import consolidate_memory
+
+    result = await db.execute(select(UserMemory).where(UserMemory.user_id == user_id))
+    memory = result.scalar_one_or_none()
+    if memory is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No memory found for user."
+        )
+
+    submitted = await consolidate_memory(db, user_id, cfg.anthropic_api_key)
+    return {
+        "submitted": submitted,
+        "batch_job_id": memory.batch_job_id,
+        "message": "Job submitted." if submitted else "Already pending or nothing to consolidate.",
+    }

@@ -27,7 +27,7 @@ from app.services.voice.costs import calc_anthropic_cost
 
 logger = structlog.get_logger(__name__)
 
-_HAIKU = "claude-haiku-4-5-20251001"
+_HAIKU = "claude-haiku-4-5"
 
 # Flat list of all known skill names (for the extraction prompt)
 _ALL_SKILLS = sorted({skill for skills in SKILL_CATEGORIES.values() for skill in skills})

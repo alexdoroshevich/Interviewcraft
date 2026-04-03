@@ -19,7 +19,7 @@ from app.services.voice.providers.openai_llm import OpenAILLMProvider
 logger = structlog.get_logger(__name__)
 
 _SONNET = "claude-sonnet-4-6"
-_HAIKU = "claude-haiku-4-5-20251001"
+_HAIKU = "claude-haiku-4-5"
 _GPT4O = "gpt-4o"
 _GPT4O_MINI = "gpt-4o-mini"
 

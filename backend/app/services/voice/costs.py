@@ -10,6 +10,8 @@ from decimal import Decimal
 # Per million tokens (input / output)
 ANTHROPIC_PRICES: dict[str, dict[str, float]] = {
     "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
+    "claude-haiku-4-5": {"input": 1.0, "output": 5.0},
+    # Legacy dated alias — kept so existing usage_logs rows still resolve
     "claude-haiku-4-5-20251001": {"input": 1.0, "output": 5.0},
 }
 # Cached input tokens are billed at 10% of the normal input price

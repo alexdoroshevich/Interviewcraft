@@ -39,11 +39,15 @@ paths:
 - **Only ask before `git push`** — that is the single exception
 - This applies to everything: bash, file edits, web searches, Docker, npm, migrations, other repos/folders
 
-## Git
+## Git — MANDATORY WORKFLOW
 - Conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`
 - Commit after every working feature — not after hours of accumulated work
 - No single commit with 500+ changed lines — split into smaller commits
 - Never commit `.env`, API keys, or secrets
+- **Never push directly to `main` or `master`** — no exceptions, not even for hotfixes
+- **Required flow: feature branch → commit → push branch → PR → all CI checks green → merge**
+- The branch guard hook enforces this at the tool level — do not attempt to bypass it
+- Hook safety: the branch guard grep must be conditional (anchored `^git\s+push`) — never unconditional deny
 
 ## Pre-push Verification — MANDATORY
 **Never push changes that will produce visible failures in GitHub CI.** Before every `git push`, verify:

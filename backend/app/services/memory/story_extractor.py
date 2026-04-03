@@ -26,7 +26,7 @@ from app.services.voice.costs import calc_anthropic_cost
 
 logger = structlog.get_logger(__name__)
 
-_HAIKU = "claude-haiku-4-5-20251001"
+_HAIKU = "claude-haiku-4-5"
 
 _EXTRACTION_SCHEMA: dict[str, Any] = {
     "type": "object",

@@ -5,6 +5,8 @@ Endpoints:
   PATCH  /api/v1/settings           — update default quality profile
   POST   /api/v1/settings/byok      — store/update encrypted BYOK keys
   DELETE /api/v1/settings/byok      — remove all BYOK keys
+  GET    /api/v1/settings/memory    — view cross-session AI memory document
+  DELETE /api/v1/settings/memory    — reset (clear) cross-session AI memory
 
 BYOK keys are encrypted with Fernet (SHA-256 of app secret_key) before storage.
 They are NEVER returned in plaintext and NEVER logged.
@@ -18,7 +20,7 @@ import httpx
 import structlog
 from fastapi import APIRouter, Depends, Response, status
 from pydantic import BaseModel
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings as app_settings
@@ -31,6 +33,8 @@ from app.models.story import Story
 from app.models.transcript_word import TranscriptWord
 from app.models.usage_log import UsageLog
 from app.models.user import User
+from app.models.user_memory import UserMemory
+from app.schemas.memory import MemoryDocument, MemoryResponse
 from app.schemas.settings import ByokUpdate, SettingsPatch, SettingsResponse
 from app.services.auth.dependencies import CurrentUser
 from app.services.byok import (
@@ -306,3 +310,59 @@ async def delete_byok_keys(
 
     logger.info("settings.byok_deleted", user_id=str(current_user.id))
     return await get_settings(current_user)
+
+
+# ── GET /api/v1/settings/memory ──────────────────────────────────────────────
+
+
+@router.get("/memory", response_model=MemoryResponse, status_code=status.HTTP_200_OK)
+async def get_memory(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MemoryResponse:
+    """Return the user's current AI memory document."""
+    result = await db.execute(select(UserMemory).where(UserMemory.user_id == current_user.id))
+    memory = result.scalar_one_or_none()
+
+    if memory is None:
+        return MemoryResponse(
+            memory=MemoryDocument(),
+            version=0,
+            token_count=0,
+            total_sessions=0,
+            last_updated=None,
+        )
+
+    doc_data = dict(memory.memory_document or {})
+    return MemoryResponse(
+        memory=MemoryDocument(**doc_data),
+        version=memory.version,
+        token_count=memory.token_count,
+        total_sessions=doc_data.get("total_sessions", 0),
+        last_updated=memory.last_built_at.isoformat() if memory.last_built_at else None,
+    )
+
+
+# ── DELETE /api/v1/settings/memory ───────────────────────────────────────────
+
+
+@router.delete("/memory", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_memory(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    """Clear the user's AI memory document (irreversible)."""
+    await db.execute(delete(UserMemory).where(UserMemory.user_id == current_user.id))
+    await db.commit()
+
+    # Invalidate Redis cache
+    try:
+        from app.redis_client import get_redis
+
+        redis = await get_redis()
+        await redis.delete(f"memory:{current_user.id}")
+    except Exception as exc:
+        logger.warning("memory.cache_invalidation_failed", error=str(exc))
+
+    logger.info("settings.memory_reset", user_id=str(current_user.id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

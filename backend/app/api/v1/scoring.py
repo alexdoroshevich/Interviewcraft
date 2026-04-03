@@ -36,6 +36,7 @@ from app.schemas.scoring import (
 )
 from app.services.auth.dependencies import CurrentUser
 from app.services.delivery.analyzer import analyze_delivery
+from app.services.memory.builder import build_memory
 from app.services.memory.skill_graph import skill_graph_service
 from app.services.scoring.scorer import Scorer
 
@@ -237,6 +238,16 @@ async def score_session(
         segments=len(scored_rows),
         total_cost_usd=str(total_cost),
         cache_hit_tokens=total_cached_tokens,
+    )
+
+    # Fire memory extraction in the background — non-blocking, won't delay the response.
+    asyncio.create_task(
+        build_memory(
+            db=db,
+            session=session,
+            user_id=current_user.id,
+            api_key=settings.anthropic_api_key,
+        )
     )
 
     return _build_status_response(session_id, scored_rows, total_cost, total_cached_tokens)
@@ -493,7 +504,7 @@ def _turns_to_text(turns: list[dict]) -> str:
 def _calc_segment_cost(result: object) -> Decimal:
     from app.services.voice.costs import calc_anthropic_cost
 
-    model = getattr(result, "model", "claude-haiku-4-5-20251001")
+    model = getattr(result, "model", "claude-haiku-4-5")
     return calc_anthropic_cost(
         model=model,
         input_tokens=getattr(result, "input_tokens", 0),

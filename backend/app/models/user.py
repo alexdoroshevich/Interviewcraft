@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.share_card import ShareCard
     from app.models.skill_graph_node import SkillGraphNode
     from app.models.usage_log import UsageLog
+    from app.models.user_memory import UserMemory
 
 
 class UserRole(enum.StrEnum):
@@ -67,6 +68,9 @@ class User(Base):
     usage_logs: Mapped[list["UsageLog"]] = relationship("UsageLog", back_populates="user")
     share_cards: Mapped[list["ShareCard"]] = relationship(
         "ShareCard", back_populates="user", cascade="all, delete-orphan"
+    )
+    user_memory: Mapped["UserMemory | None"] = relationship(
+        "UserMemory", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
     def is_locked(self) -> bool:
