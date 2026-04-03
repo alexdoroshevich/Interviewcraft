@@ -67,6 +67,20 @@ frontend/.playwright-screenshots/
 # Private planning documents
 private/
 
+# Claude Code — internal agent/skill configs and rules (proprietary)
+.claude/agents/
+.claude/skills/
+.claude/scripts/
+.claude/rules/architecture.md
+.claude/rules/voice-pipeline.md
+.claude/agent-memory/
+
+# Internal docs — roadmaps, ADRs with implementation detail, competitive analysis
+docs/IMPLEMENTATION_ROADMAP.md
+docs/IMPLEMENTATION_PLAN.md
+docs/adr/001-user-memory-system.md
+docs/adr/002-claude-code-modernization.md
+
 # Claude Code memory (personal, not shared)
 .claude/projects/
 .claude/settings.local.json
