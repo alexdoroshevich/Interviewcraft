@@ -120,7 +120,7 @@ Selecting the full technology stack for InterviewCraft's backend, frontend, data
 
 - **CI:** GitHub Actions (free for public repos)
 - **Deploy:** Railway / Fly.io (Docker, WebSocket support, $5-20/mo)
-- **License:** BSL 1.1 (source-available, prevents free-riding)
+- **License:** MIT
 
 ---
 

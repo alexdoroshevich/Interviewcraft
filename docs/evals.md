@@ -64,7 +64,7 @@ Schema:
 
 ### Running the suites
 ```bash
-# Lite suite (uses real Anthropic API — ~$0.15 per run)
+# Lite suite (uses real Anthropic API)
 pytest tests/scoring/test_golden_answers.py -m lite -v
 
 # Full suite (nightly)

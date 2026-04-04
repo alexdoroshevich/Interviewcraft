@@ -1,27 +1,27 @@
 """Smart pause detection — VAD-based, no NLP required.
 
 Spec (Component 1):
-  - If Deepgram still sending partials (<700ms since last partial) → do NOT interrupt
-  - Silence 5s with no new partials → soft prompt ("take your time...")
-  - Silence > 10s → re-engage ("shall I ask the next question?")
+  - If Deepgram still sending partials within VOICE_PARTIAL_TIMEOUT_MS → do NOT interrupt
+  - Silence >= VOICE_SOFT_PROMPT_MS → soft prompt ("take your time...")
+  - Silence >= VOICE_RE_ENGAGE_MS → re-engage ("shall I ask the next question?")
   - NEVER cut off mid-thought. Better to wait too long than interrupt.
 """
 
 import time
 from enum import StrEnum
 
+from app.services.voice import tuning
+
 
 class PauseAction(StrEnum):
     NONE = "none"
-    SOFT_PROMPT = "soft_prompt"  # 5s silence
-    RE_ENGAGE = "re_engage"  # >10s silence
+    SOFT_PROMPT = "soft_prompt"
+    RE_ENGAGE = "re_engage"
 
 
-PARTIAL_TIMEOUT_MS = (
-    2000  # Still speaking if partial within this window (generous for thinking pauses)
-)
-SOFT_PROMPT_MS = 12000  # 12s silence → "take your time"
-RE_ENGAGE_MS = 20000  # 20s silence → gentle re-engage
+PARTIAL_TIMEOUT_MS = tuning.PARTIAL_TIMEOUT_MS
+SOFT_PROMPT_MS = tuning.SOFT_PROMPT_MS
+RE_ENGAGE_MS = tuning.RE_ENGAGE_MS
 
 
 class SmartPause:

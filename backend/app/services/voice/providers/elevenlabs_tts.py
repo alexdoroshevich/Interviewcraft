@@ -15,6 +15,7 @@ from collections.abc import AsyncGenerator
 import httpx
 import structlog
 
+from app.services.voice import tuning
 from app.services.voice.interfaces import TTSProvider
 from app.services.voice.types import TTSMetrics
 
@@ -56,15 +57,15 @@ class ElevenLabsTTSProvider(TTSProvider):
         # output_format and optimize_streaming_latency go as query params per ElevenLabs API
         params = {
             "output_format": _OUTPUT_FORMAT,
-            "optimize_streaming_latency": "4",
+            "optimize_streaming_latency": tuning.TTS_LATENCY_OPT,
         }
         payload = {
             "text": text,
             "model_id": _MODEL_ID,
             "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.75,
-                "style": 0.0,
+                "stability": tuning.TTS_STABILITY,
+                "similarity_boost": tuning.TTS_SIMILARITY_BOOST,
+                "style": tuning.TTS_STYLE,
                 "use_speaker_boost": True,
             },
         }
@@ -74,7 +75,7 @@ class ElevenLabsTTSProvider(TTSProvider):
                 "POST", url, headers=headers, params=params, json=payload
             ) as response:
                 response.raise_for_status()
-                async for chunk in response.aiter_bytes(chunk_size=16384):
+                async for chunk in response.aiter_bytes(chunk_size=tuning.TTS_CHUNK_SIZE):
                     if chunk:
                         if first_byte_ms is None:
                             first_byte_ms = int((time.monotonic() - start) * 1000)

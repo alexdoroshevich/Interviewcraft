@@ -75,11 +75,11 @@ ANSWER → LINT (evidence-based) → DIFF (3 versions) → REWIND (re-answer seg
 
 ## Quality Profiles
 
-| Profile | Cost/session | Models |
-|---------|-------------|--------|
-| Quality | $0.60–1.30 | Sonnet (all tasks) + ElevenLabs |
-| Balanced | $0.30–0.60 | Sonnet (voice), Haiku (scoring/diff/memory) + ElevenLabs |
-| Budget | $0.15–0.30 | Haiku (all) + Deepgram Aura-1 TTS |
+| Profile | Models |
+|---------|--------|
+| Quality | Sonnet (all tasks) + ElevenLabs |
+| Balanced | Sonnet (voice), Haiku (scoring/diff/memory) + ElevenLabs |
+| Budget | Haiku (all) + Deepgram Aura-1 TTS |
 
 ---
 

@@ -26,7 +26,7 @@ Four sub-problems:
 - 3 API calls per segment
 - Simple to debug
 - Highest latency + cost (3× vs batched)
-- Rejected: violates DoD cost targets (~$0.65/session Quality)
+- Rejected: too many API calls, violates DoD cost targets
 
 ### Option B: One batched call (score + diff + memory hints)
 
@@ -90,11 +90,11 @@ Tracked in `usage_logs.cached` and surfaced in `/admin/metrics` as "Prompt cache
 
 Per quality profile, per spec Section 2.3:
 
-| Profile | Scoring model | Diff model | Expected cost/session |
-|---|---|---|---|
-| Quality | Sonnet 4.6 | Sonnet 4.6 | ~$0.65 |
-| Balanced | Haiku 4.5 | Haiku 4.5 | ~$0.35 |
-| Budget | Haiku 4.5 | Haiku 4.5 | ~$0.15 |
+| Profile | Scoring model | Diff model |
+|---|---|---|
+| Quality | Sonnet 4.6 | Sonnet 4.6 |
+| Balanced | Haiku 4.5 | Haiku 4.5 |
+| Budget | Haiku 4.5 | Haiku 4.5 |
 
 Note: Scoring rubric was calibrated on Sonnet. Haiku variance ≈ ±6 vs ±4 (acceptable, within DoD < 8 threshold).
 
@@ -145,4 +145,4 @@ backend/tests/scoring/test_golden_answers.py — unit + integration + nightly su
 - cache_hit_rate: TBD (target > 70%)
 - scoring_latency_p50: TBD (expected 3-8s, not on critical voice path)
 - golden_test_variance: TBD (target < 8 per answer)
-- cost_per_segment_balanced: TBD (expected ~$0.04-0.08)
+- cost_per_segment_balanced: TBD

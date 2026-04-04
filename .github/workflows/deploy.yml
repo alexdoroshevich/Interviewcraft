@@ -1,8 +1,8 @@
 name: Deploy
 
 # Triggers:
-#   push to main  → production  (fly app: interviewcraft-api)
-#   workflow_dispatch → manual deploy from GitHub UI with environment choice
+#   push to main  → production deploy
+#   workflow_dispatch → manual deploy from GitHub UI
 on:
   push:
     branches: [main]
@@ -11,14 +11,6 @@ on:
       - "frontend/**"
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Deployment target"
-        required: true
-        default: "production"
-        type: choice
-        options:
-          - production
-          - staging
       dry_run:
         description: "Dry run — validate without deploying"
         required: false
@@ -27,7 +19,7 @@ on:
 
 # Prevent simultaneous deploys; queue instead of cancel to avoid partial deploys
 concurrency:
-  group: deploy-${{ github.event.inputs.environment || 'production' }}
+  group: deploy-production
   cancel-in-progress: false
 
 permissions:
@@ -76,7 +68,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@v6 # TODO: pin to SHA — run: gh api repos/actions/setup-python/git/refs/tags/v5 | jq .object.sha
+      - uses: actions/setup-python@v6 # TODO: pin to SHA
         with:
           python-version: "3.13"
           cache: pip
@@ -102,7 +94,6 @@ jobs:
         if: always()
         run: |
           echo "## Backend Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" == "success" ]; then
             echo "- Status: ✅ All checks passed" >> $GITHUB_STEP_SUMMARY
@@ -110,9 +101,9 @@ jobs:
             echo "- Status: ❌ One or more checks failed" >> $GITHUB_STEP_SUMMARY
           fi
 
-  # ── Deploy to backend (push to main or manual dispatch) ──────────────────────
+  # ── Deploy to production ──────────────────────────────────────────────────────
   deploy:
-    name: Deploy backend (${{ github.event.inputs.environment || 'production' }})
+    name: Deploy backend
     needs: test
     runs-on: ubuntu-latest
     if: github.event.inputs.dry_run != 'true'
@@ -123,28 +114,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      # Fly.io OIDC not yet available (April 2026) — FLY_API_TOKEN remains the standard
+      # Fly.io OIDC not yet available — FLY_API_TOKEN remains the standard
       - uses: superfly/flyctl-actions/setup-flyctl@master # TODO: pin to SHA
 
       - name: Deploy backend
-        # staging: fly.staging.toml is at repo root, Dockerfile path is backend/Dockerfile (repo-root context)
-        # production: fly.toml is in backend/, Dockerfile is Dockerfile (backend/ context) — must cd backend first
-        run: |
-          ENV="${{ github.event.inputs.environment || 'production' }}"
-          if [ "$ENV" = "staging" ]; then
-            flyctl deploy --config fly.staging.toml --remote-only
-          else
-            cd backend && flyctl deploy --config fly.toml --remote-only
-          fi
+        # fly.toml lives in backend/ — must cd first so Fly uses backend/ as build context
+        run: cd backend && flyctl deploy --config fly.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy summary
         if: always()
         run: |
-          ENV="${{ github.event.inputs.environment || 'production' }}"
           echo "## Deploy Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Environment: \`$ENV\`" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" == "success" ]; then
             echo "- Status: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY

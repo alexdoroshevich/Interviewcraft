@@ -84,3 +84,10 @@ docs/adr/002-claude-code-modernization.md
 # Claude Code memory (personal, not shared)
 .claude/projects/
 .claude/settings.local.json
+
+# Dev/staging Fly.io configs — not needed for single-env solo project
+fly.dev.toml
+fly.staging.toml
+
+# Windows crash dumps
+bash.exe.stackdump

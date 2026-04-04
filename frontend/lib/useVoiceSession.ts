@@ -58,8 +58,11 @@ interface UseVoiceSessionReturn {
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000];
 const AUDIO_CHUNK_MS = 250;
-const SILENCE_THRESHOLD = 8;     // AnalyserNode byte value (0–255); below = silence
-const LOW_CONFIDENCE_LIMIT = 1;  // Switch to text mode after backend sends low_confidence_fallback
+const SILENCE_THRESHOLD = 8;        // AnalyserNode byte value (0–255); below = silence
+const LOW_CONFIDENCE_LIMIT = 1;     // Switch to text mode after backend sends low_confidence_fallback
+const BARGE_IN_AMPLITUDE = 80;      // AnalyserNode byte value threshold for barge-in detection
+const BARGE_IN_FRAME_COUNT = 3;     // Consecutive loud frames required to trigger barge-in
+const VAD_INTERVAL_MS = 100;        // VAD polling interval in milliseconds
 
 export function useVoiceSession({
   sessionId,
@@ -182,11 +185,10 @@ export function useVoiceSession({
       const isSilent = avg < SILENCE_THRESHOLD;
 
       // Barge-in: if user speaks while bot is speaking, stop playback
-      // Require 3 consecutive loud frames (~300ms) for fast barge-in recovery
       if (stateRef.current === "speaking") {
-        if (avg > 80) { // Above typical speaker bleed threshold (80 = spec-defined threshold)
+        if (avg > BARGE_IN_AMPLITUDE) {
           bargeInCountRef.current += 1;
-          if (bargeInCountRef.current >= 3) {
+          if (bargeInCountRef.current >= BARGE_IN_FRAME_COUNT) {
             bargeInCountRef.current = 0;
             stopAudioPlayback();
             if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -202,7 +204,7 @@ export function useVoiceSession({
 
       // Note: we do NOT pause/resume MediaRecorder anymore.
       // Keeping audio flowing prevents Deepgram STT from timing out.
-    }, 100);
+    }, VAD_INTERVAL_MS);
   }, [stopAudioPlayback]);
 
   const stopVADGate = useCallback(() => {

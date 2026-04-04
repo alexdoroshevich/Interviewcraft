@@ -15,7 +15,7 @@ docker compose exec postgres psql -U postgres -d interviewcraft -c \
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"demo@interviewcraft.app","password":"Demo2026!","name":"Demo User"}' | jq .
+  -d '{"email":"demo@interviewcraft.app","password":"CHANGE_ME_BEFORE_RUNNING","name":"Demo User"}' | jq .
 ```
 
 3. Run the seed script (if it exists at backend/scripts/seed_demo.py):

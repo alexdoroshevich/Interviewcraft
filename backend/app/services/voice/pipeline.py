@@ -9,11 +9,11 @@ Key optimisation: stream first complete sentence to TTS while LLM still generate
 This is what drives p50 < 800ms E2E latency.
 
 Smart pause (VAD-based, no NLP):
-  partials < 2s ago  → still speaking, do NOT commit
-  ~4s full silence   → commit short answer (<10 words)
-  ~8s full silence   → commit long answer (≥10 words)
-  12s full silence   → soft prompt toast
-  20s full silence   → re-engage toast
+  recent partials              → still speaking, do NOT commit
+  VOICE_COMMIT_SHORT_S silence → commit short answer
+  VOICE_COMMIT_LONG_S silence  → commit long answer
+  VOICE_SOFT_PROMPT_MS         → soft prompt toast
+  VOICE_RE_ENGAGE_MS           → re-engage toast
 
 Audio is NEVER stored to disk. Lives only in asyncio.Queue memory.
 """
@@ -45,6 +45,7 @@ from app.services.voice.costs import (
 )
 from app.services.voice.interfaces import ProviderSet
 from app.services.voice.prompts import RE_ENGAGE_TEXT, SOFT_PROMPT_TEXT, get_system_prompt
+from app.services.voice import tuning
 from app.services.voice.providers.deepgram_tts import DeepgramTTSProvider
 from app.services.voice.smart_pause import PauseAction, SmartPause
 from app.services.voice.types import LatencySnapshot, PipelineState, TranscriptChunk
@@ -266,7 +267,7 @@ class VoicePipeline:  # pragma: no cover
         """
         # Debounce: wait for natural speech pause before triggering LLM.
         # 2s tolerates natural pauses (breathing, thinking) without splitting the answer.
-        min_words_for_llm = 2
+        min_words_for_llm = tuning.PIPELINE_MIN_WORDS_FOR_LLM
 
         e2e_start = time.monotonic()
         stt_start = time.monotonic()
@@ -384,12 +385,12 @@ class VoicePipeline:  # pragma: no cover
                 # The hard cap is measured from last_activity, NOT from the first
                 # final — so a 60-second answer never triggers the hard cap early.
                 #
-                # Effective silence before commit (measured after Deepgram endpointing ~300ms):
-                #   Short answers (<10 words): 0.3s extra silence → ~0.6s total silence
-                #   Long answers  (≥10 words): 1.2s extra silence → ~1.5s total silence
-                # Hard cap: 30s of complete inactivity (STT stall guard only).
-                poll_interval_s = 0.2
-                hard_cap_s = 30.0
+                # Effective silence before commit (measured after Deepgram endpointing):
+                #   Short answers: VOICE_COMMIT_SHORT_S extra silence
+                #   Long answers:  VOICE_COMMIT_LONG_S extra silence
+                # Hard cap: VOICE_HARD_CAP_S of complete inactivity (STT stall guard only).
+                poll_interval_s = tuning.PIPELINE_POLL_INTERVAL_S
+                hard_cap_s = tuning.PIPELINE_HARD_CAP_S
                 quiet_since: float | None = None
                 last_activity = time.monotonic()
 
@@ -411,7 +412,7 @@ class VoicePipeline:  # pragma: no cover
                             # Scale extra wait by answer length so short replies are fast
                             # and long thoughtful answers get more buffer.
                             # Tuned for p95 < 1.5s: short=0.3s silence, long=1.2s silence.
-                            commit_extra_s = 0.3 if len(accumulated_text.split()) < 10 else 1.2
+                            commit_extra_s = tuning.PIPELINE_COMMIT_SHORT_S if len(accumulated_text.split()) < tuning.PIPELINE_COMMIT_THRESHOLD_WORDS else tuning.PIPELINE_COMMIT_LONG_S
                             if quiet_since is None:
                                 quiet_since = time.monotonic()
                             elif time.monotonic() - quiet_since >= commit_extra_s:
@@ -552,7 +553,7 @@ class VoicePipeline:  # pragma: no cover
         Also recovers from [WAIT] deadlock: if carryover text has been pending
         for > 8s with no new speech, force the LLM to respond anyway.
         """
-        carryover_timeout_s = 8.0
+        carryover_timeout_s = tuning.PIPELINE_CARRYOVER_TIMEOUT_S
 
         while True:
             await asyncio.sleep(0.5)
@@ -695,7 +696,7 @@ class VoicePipeline:  # pragma: no cover
         async for token in self._providers.voice_llm.generate_stream(
             messages=_messages,
             system=self._system_prompt,
-            max_tokens=256,  # Voice responses are 2-3 sentences (~50-80 tokens)
+            max_tokens=tuning.PIPELINE_LLM_MAX_TOKENS,
         ):
             if first_token:
                 llm_ttft_ms = int((time.monotonic() - llm_start) * 1000)
@@ -708,7 +709,7 @@ class VoicePipeline:  # pragma: no cover
             # it outputs "[WAIT]". We abort TTS and return to listening.
             # Guard: after 2 consecutive [WAIT] signals, stop waiting — the user
             # probably said something complete and the LLM is miscalibrating.
-            if full_response.strip().startswith("[WAIT]") and self._wait_count < 2:
+            if full_response.strip().startswith("[WAIT]") and self._wait_count < tuning.PIPELINE_MAX_WAIT_COUNT:
                 logger.info("pipeline.llm_wait_signal", text=full_response[:40])
                 await tts_queue.put(None)
                 await tts_task

@@ -15,6 +15,7 @@ from collections.abc import AsyncGenerator
 import structlog
 from deepgram import DeepgramClient, LiveOptions, LiveTranscriptionEvents
 
+from app.services.voice import tuning
 from app.services.voice.interfaces import STTProvider
 from app.services.voice.types import TranscriptChunk, WordTimestamp
 
@@ -29,10 +30,9 @@ _LIVE_OPTIONS = LiveOptions(
     punctuate=True,
     smart_format=True,
     interim_results=True,  # Partials for smart pause detection
-    # Word-level timestamps are returned by default in response alternatives
-    utterance_end_ms="1000",  # Signal utterance end after 1.0s silence (was 1500ms)
+    utterance_end_ms=tuning.STT_UTTERANCE_END_MS,
     vad_events=True,
-    endpointing=300,  # Wait 300ms of audio silence before finalizing (was 500ms)
+    endpointing=tuning.STT_ENDPOINTING_MS,
 )
 
 
@@ -43,7 +43,7 @@ class DeepgramSTTProvider(STTProvider):
     Confidence < 0.60 → partial treated as unreliable (pipeline handles retry prompt).
     """
 
-    STT_CONFIDENCE_THRESHOLD = 0.60
+    STT_CONFIDENCE_THRESHOLD = tuning.STT_CONFIDENCE_THRESHOLD
 
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key

@@ -86,11 +86,11 @@ class ProviderSet:
 
 ### Quality profiles
 
-| Profile | STT | Voice LLM | Scoring LLM | TTS | Cost/session |
-|---|---|---|---|---|---|
-| Quality | Deepgram Nova-2 | Sonnet 4.6 | Sonnet 4.6 | ElevenLabs Turbo | ~$0.65 |
-| Balanced | Deepgram Nova-2 | Sonnet 4.6 | Haiku 4.5 | ElevenLabs Turbo | ~$0.35 |
-| Budget | Deepgram Nova-2 | Sonnet 4.6 | Haiku 4.5 | Deepgram Aura | ~$0.15 |
+| Profile | STT | Voice LLM | Scoring LLM | TTS |
+|---|---|---|---|---|
+| Quality | Deepgram Nova-2 | Sonnet 4.6 | Sonnet 4.6 | ElevenLabs Turbo |
+| Balanced | Deepgram Nova-2 | Sonnet 4.6 | Haiku 4.5 | ElevenLabs Turbo |
+| Budget | Deepgram Nova-2 | Sonnet 4.6 | Haiku 4.5 | Deepgram Aura |
 
 Note: Voice LLM always Sonnet — latency and quality matter most for real-time conversation.
 Scoring/diff/memory can use Haiku since they're async and lower-stakes.
