@@ -37,6 +37,7 @@ from app.models.interview_session import InterviewSession
 from app.models.session_metrics import SessionMetrics
 from app.models.transcript_word import TranscriptWord
 from app.services.usage import log_usage
+from app.services.voice import tuning
 from app.services.voice.costs import (
     calc_anthropic_cost,
     calc_deepgram_stt_cost,
@@ -45,7 +46,6 @@ from app.services.voice.costs import (
 )
 from app.services.voice.interfaces import ProviderSet
 from app.services.voice.prompts import RE_ENGAGE_TEXT, SOFT_PROMPT_TEXT, get_system_prompt
-from app.services.voice import tuning
 from app.services.voice.providers.deepgram_tts import DeepgramTTSProvider
 from app.services.voice.smart_pause import PauseAction, SmartPause
 from app.services.voice.types import LatencySnapshot, PipelineState, TranscriptChunk
@@ -412,7 +412,12 @@ class VoicePipeline:  # pragma: no cover
                             # Scale extra wait by answer length so short replies are fast
                             # and long thoughtful answers get more buffer.
                             # Tuned for p95 < 1.5s: short=0.3s silence, long=1.2s silence.
-                            commit_extra_s = tuning.PIPELINE_COMMIT_SHORT_S if len(accumulated_text.split()) < tuning.PIPELINE_COMMIT_THRESHOLD_WORDS else tuning.PIPELINE_COMMIT_LONG_S
+                            commit_extra_s = (
+                                tuning.PIPELINE_COMMIT_SHORT_S
+                                if len(accumulated_text.split())
+                                < tuning.PIPELINE_COMMIT_THRESHOLD_WORDS
+                                else tuning.PIPELINE_COMMIT_LONG_S
+                            )
                             if quiet_since is None:
                                 quiet_since = time.monotonic()
                             elif time.monotonic() - quiet_since >= commit_extra_s:
@@ -709,7 +714,10 @@ class VoicePipeline:  # pragma: no cover
             # it outputs "[WAIT]". We abort TTS and return to listening.
             # Guard: after 2 consecutive [WAIT] signals, stop waiting — the user
             # probably said something complete and the LLM is miscalibrating.
-            if full_response.strip().startswith("[WAIT]") and self._wait_count < tuning.PIPELINE_MAX_WAIT_COUNT:
+            if (
+                full_response.strip().startswith("[WAIT]")
+                and self._wait_count < tuning.PIPELINE_MAX_WAIT_COUNT
+            ):
                 logger.info("pipeline.llm_wait_signal", text=full_response[:40])
                 await tts_queue.put(None)
                 await tts_task
