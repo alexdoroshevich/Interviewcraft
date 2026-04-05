@@ -69,3 +69,4 @@ ignore = ["E501"]
 python_version = "3.13"
 strict = false
 ignore_missing_imports = true
+disallow_untyped_defs = true
