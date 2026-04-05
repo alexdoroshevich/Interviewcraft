@@ -272,7 +272,7 @@ async def seed() -> None:
 
         await db.commit()
         print(f"\nDemo seed complete!")
-        print(f"  User:     {DEMO_EMAIL} / {DEMO_PASSWORD}")
+        print(f"  User:     {DEMO_EMAIL} / [see DEMO_PASSWORD constant]")
         print(f"  Sessions: {len(SESSIONS_SPEC)}")
         print(f"  Skills:   {len(SKILL_NODES)} nodes")
         print(f"  Stories:  {len(STORIES)}")
