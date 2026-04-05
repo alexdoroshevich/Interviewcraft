@@ -10,6 +10,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 type SessionType = "behavioral" | "system_design" | "coding_discussion" | "negotiation" | "debrief";
+
+const DURATION_DEFAULTS: Record<SessionType, number> = {
+  behavioral: 35,
+  system_design: 50,
+  coding_discussion: 35,
+  negotiation: 20,
+  debrief: 25,
+};
 type QualityProfile = "quality" | "balanced" | "budget";
 type Persona = "neutral" | "friendly" | "tough";
 type Company = "google" | "meta" | "amazon" | "microsoft" | "apple" | "netflix" | "uber" | "stripe" | "linkedin" | "airbnb" | "nvidia" | "spotify" | null;
@@ -123,6 +131,7 @@ function NewSessionForm() {
   const [voiceId, setVoiceId] = useState(ELEVENLABS_VOICES[0].id);
   const [persona, setPersona] = useState<Persona>("neutral");
   const [company, setCompany] = useState<Company>(null);
+  const [durationMinutes, setDurationMinutes] = useState(DURATION_DEFAULTS.behavioral);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,11 +158,16 @@ function NewSessionForm() {
     }
   }, [profile]);
 
+  // Reset duration to type default when session type changes
+  useEffect(() => {
+    setDurationMinutes(DURATION_DEFAULTS[sessionType]);
+  }, [sessionType]);
+
   async function startSession() {
     setLoading(true);
     setError(null);
     try {
-      const session = await api.sessions.create(sessionType, profile, undefined, voiceId, persona, company, focusSkill ?? undefined);
+      const session = await api.sessions.create(sessionType, profile, undefined, voiceId, persona, company, focusSkill ?? undefined, durationMinutes);
       router.push(`/sessions/${session.id}`);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -440,6 +454,35 @@ function NewSessionForm() {
                 ))}
               </SelectContent>
             </Select>
+          </section>
+
+          {/* Duration */}
+          <section className="mb-8">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Interview Duration
+            </label>
+            <p className="text-xs text-slate-400 mb-2">
+              A countdown timer will run during the session — just like a real interview.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={5}
+                max={90}
+                step={5}
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                className="flex-1 accent-indigo-600"
+              />
+              <span className="text-sm font-mono font-semibold text-slate-700 dark:text-slate-300 w-14 text-right">
+                {durationMinutes} min
+              </span>
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-400 mt-0.5 px-0.5">
+              <span>5 min</span>
+              <span>Default: {DURATION_DEFAULTS[sessionType]} min</span>
+              <span>90 min</span>
+            </div>
           </section>
 
           {error && (

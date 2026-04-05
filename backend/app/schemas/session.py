@@ -29,6 +29,7 @@ class SessionCreate(BaseModel):
         pattern="^(google|meta|amazon|microsoft|apple|netflix|uber|stripe|linkedin|airbnb|nvidia|spotify)$",
     )
     focus_skill: str | None = None
+    duration_limit_minutes: int | None = Field(default=None, ge=1, le=180)
 
 
 class SessionResponse(BaseModel):
@@ -41,6 +42,7 @@ class SessionResponse(BaseModel):
     persona: str
     company: str | None
     focus_skill: str | None
+    duration_limit_minutes: int | None
     total_cost_usd: Decimal
     created_at: datetime
     ended_at: datetime | None

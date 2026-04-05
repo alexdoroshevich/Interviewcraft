@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,6 +75,7 @@ class InterviewSession(Base):
     )
     company: Mapped[str | None] = mapped_column(String(30), nullable=True)
     focus_skill: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    duration_limit_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Full transcript stored as JSONB array of {role, text, timestamp_ms}
     # Word-level timestamps go in transcript_words table (TTL 14d), NOT here

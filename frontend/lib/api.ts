@@ -88,6 +88,7 @@ export interface SessionResponse {
   persona: string;
   company: string | null;
   focus_skill: string | null;
+  duration_limit_minutes: number | null;
   total_cost_usd: string;
   created_at: string;
   ended_at: string | null;
@@ -604,10 +605,10 @@ export const api = {
 
     get: (id: string) => apiFetch<SessionDetail>(`/api/v1/sessions/${id}`),
 
-    create: (type: string, quality_profile = "balanced", interview_type?: string, voice_id?: string, persona = "neutral", company: string | null = null, focus_skill?: string) =>
+    create: (type: string, quality_profile = "balanced", interview_type?: string, voice_id?: string, persona = "neutral", company: string | null = null, focus_skill?: string, duration_limit_minutes?: number) =>
       apiFetch<SessionResponse>("/api/v1/sessions", {
         method: "POST",
-        body: JSON.stringify({ type, quality_profile, interview_type, voice_id, persona, company, focus_skill }),
+        body: JSON.stringify({ type, quality_profile, interview_type, voice_id, persona, company, focus_skill, duration_limit_minutes }),
       }),
 
     end: (id: string, status: "completed" | "abandoned" = "completed") =>
