@@ -645,7 +645,9 @@ class VoicePipeline:  # pragma: no cover
                         "x_latency": {},
                     }
                 )
-                self._conversation.append({"role": "user", "content": text})
+                self._conversation.append(
+                    {"role": "user", "content": f"<candidate_answer>{text}</candidate_answer>"}
+                )
                 async with self._llm_lock:
                     await self._set_state(websocket, PipelineState.PROCESSING)
                     lat = LatencySnapshot()
@@ -846,7 +848,9 @@ class VoicePipeline:  # pragma: no cover
                 text = (self._carryover_text + " " + text).strip()
                 self._carryover_text = ""
 
-            self._conversation.append({"role": "user", "content": text})
+            self._conversation.append(
+                {"role": "user", "content": f"<candidate_answer>{text}</candidate_answer>"}
+            )
 
             async with self._llm_lock:
                 await self._set_state(websocket, PipelineState.PROCESSING)
@@ -948,12 +952,16 @@ class VoicePipeline:  # pragma: no cover
 
         Called after every complete user-turn + AI-response cycle so that
         a disconnected session has a partial transcript, not an empty one.
+        The <candidate_answer> delimiters used in LLM context are stripped here
+        so the stored transcript is clean for frontend display and scoring.
         """
         int((time.monotonic() - self._session_start) * 1000)
         self._session.transcript = [
             {
                 "role": msg["role"],
-                "content": msg["content"],
+                "content": msg["content"]
+                .replace("<candidate_answer>", "")
+                .replace("</candidate_answer>", ""),
                 "ts_ms": idx * 1000,  # Approximate; real timestamps via transcript_words table
             }
             for idx, msg in enumerate(self._conversation)
