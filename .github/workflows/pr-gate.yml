@@ -71,10 +71,10 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
-      - name: Dependency audit (pip-audit) — fail on HIGH+ vulnerabilities
+      - name: Dependency audit (pip-audit) — fail on any known vulnerability
         run: |
           pip install pip-audit
-          pip-audit --desc on --min-vulnerability-severity high
+          pip-audit --desc on --skip-editable
 
       - name: Lint (ruff) — must be clean
         run: ruff check .

@@ -37,7 +37,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[type-arg]
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # type: ignore[type-arg]
     """Application lifespan — startup and shutdown hooks."""
     logger.info("interviewcraft.startup", env=settings.app_env, debug=settings.debug)
     yield

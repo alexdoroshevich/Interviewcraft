@@ -120,7 +120,9 @@ async def score_session(
     total_cached_tokens = 0
 
     # Score all segments in parallel for ~3x speedup
-    async def _score_one(idx: int, question: str, answer_turns: list[dict]) -> tuple[int, str, list[dict], ScoringResult]:
+    async def _score_one(
+        idx: int, question: str, answer_turns: list[dict]
+    ) -> tuple[int, str, list[dict], ScoringResult]:
         return (
             idx,
             question,
