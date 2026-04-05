@@ -1,0 +1,48 @@
+{
+  "output": {
+    "filePath": ".claude/repomix-output.xml",
+    "style": "xml",
+    "headerText": "InterviewCraft codebase — packed for LLM context. FastAPI backend + Next.js frontend.",
+    "instructionFilePath": ".claude/repomix-instructions.md",
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": true,
+    "copyToClipboard": false
+  },
+  "include": [
+    "backend/app/**/*.py",
+    "frontend/app/**/*.tsx",
+    "frontend/app/**/*.ts",
+    "frontend/components/**/*.tsx",
+    "frontend/lib/**/*.ts",
+    "backend/alembic/versions/*.py",
+    "backend/pyproject.toml",
+    "frontend/package.json"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/__pycache__/**",
+      "**/*.pyc",
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.venv/**",
+      "**/venv/**",
+      "**/*.egg-info/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/tests/**",
+      "**/__tests__/**",
+      ".claude/**",
+      "docs/**",
+      "scripts/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

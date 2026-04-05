@@ -74,6 +74,8 @@ private/
 .claude/rules/architecture.md
 .claude/rules/voice-pipeline.md
 .claude/agent-memory/
+.claude/sessions/
+.claude/repomix-output.xml
 
 # Internal docs — roadmaps, ADRs with implementation detail, competitive analysis
 docs/IMPLEMENTATION_ROADMAP.md

@@ -540,6 +540,7 @@ export default function SessionPage() {
           {isActive && (
             <span className="text-xs font-mono text-slate-400">{elapsedStr}</span>
           )}
+          <span className="text-xs text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5">AI Interviewer</span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${stateInfo.color}`}>
