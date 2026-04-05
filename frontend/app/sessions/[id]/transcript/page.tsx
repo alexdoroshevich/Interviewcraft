@@ -392,7 +392,7 @@ function QuestionCard({ score, index, sessionId }: { score: SegmentScoreResponse
             {showDiff ? "▲ Hide" : "▼ 3 rewrite versions"}
           </button>
         </div>
-        {showLint && <LintCard score={score as any} />}
+        {showLint && <LintCard score={score} />}
         {showDiff && (
           hasDiff
             ? <DiffView

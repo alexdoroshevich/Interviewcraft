@@ -34,7 +34,7 @@ export interface SegmentScore {
   question_text: string;
   overall_score: number;
   confidence: string;
-  category_scores: CategoryScores;
+  category_scores: Record<string, number>;
   rules_triggered: RuleTriggered[];
   level_assessment: LevelAssessment;
   diff_versions: DiffVersions | null;

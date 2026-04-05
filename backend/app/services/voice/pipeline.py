@@ -332,7 +332,7 @@ class VoicePipeline:  # pragma: no cover
 
         final_queue: asyncio.Queue[TranscriptChunk | None] = asyncio.Queue()
 
-        async def _audio_gen():
+        async def _audio_gen() -> AsyncGenerator[bytes]:
             while True:
                 chunk = await audio_in.get()
                 if chunk is None:

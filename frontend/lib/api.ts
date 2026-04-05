@@ -158,9 +158,9 @@ export interface DiffVersions {
 }
 
 export interface LevelAssessment {
-  l4: string;
-  l5: string;
-  l6: string;
+  l4: "pass" | "borderline" | "fail";
+  l5: "pass" | "borderline" | "fail";
+  l6: "pass" | "borderline" | "fail";
   gaps: string[];
 }
 

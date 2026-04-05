@@ -38,7 +38,7 @@ from app.services.auth.dependencies import CurrentUser
 from app.services.delivery.analyzer import analyze_delivery
 from app.services.memory.builder import build_memory
 from app.services.memory.skill_graph import skill_graph_service
-from app.services.scoring.scorer import Scorer
+from app.services.scoring.scorer import Scorer, ScoringResult
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["scoring"])
@@ -120,7 +120,9 @@ async def score_session(
     total_cached_tokens = 0
 
     # Score all segments in parallel for ~3x speedup
-    async def _score_one(idx: int, question: str, answer_turns: list[dict]):
+    async def _score_one(
+        idx: int, question: str, answer_turns: list[dict]
+    ) -> tuple[int, str, list[dict], ScoringResult]:
         return (
             idx,
             question,

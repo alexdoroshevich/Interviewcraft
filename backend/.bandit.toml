@@ -1,0 +1,3 @@
+[bandit]
+# B101: assert_used — asserts are common in tests and non-security contexts; skip globally
+skips = ["B101"]

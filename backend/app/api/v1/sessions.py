@@ -18,6 +18,7 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi.responses import Response as PDFResponse
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -458,13 +459,11 @@ async def get_session_report(
     session_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-):
+) -> PDFResponse:
     """Generate and stream a PDF coaching report for a completed session.
 
     Returns the PDF as application/pdf. Result is cached 24h in Redis.
     """
-    from fastapi.responses import Response as FResponse
-
     from app.services.report.generator import download_report_pdf, generate_session_pdf
 
     try:
@@ -478,7 +477,7 @@ async def get_session_report(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
 
     pdf_bytes = await download_report_pdf(file_id, settings.anthropic_api_key)
-    return FResponse(
+    return PDFResponse(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="report-{session_id}.pdf"'},
