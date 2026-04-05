@@ -110,6 +110,7 @@ class VoicePipeline:  # pragma: no cover
         user_id: uuid.UUID,
         company_questions: list[str] | None = None,
         candidate_context: str | None = None,
+        duration_limit_minutes: int | None = None,
     ) -> None:
         self._providers = providers
         self._db = db
@@ -147,6 +148,7 @@ class VoicePipeline:  # pragma: no cover
         self._wait_count = 0  # Consecutive [WAIT] signals — capped at 2, then force-respond
         self._carryover_set_at: float | None = None  # Monotonic time when carryover was last set
         self._tool_context: str | None = None  # Current board/code state sent by frontend
+        self._duration_limit_minutes = duration_limit_minutes
 
     # ── Public entry point ─────────────────────────────────────────────────────
 
@@ -187,18 +189,68 @@ class VoicePipeline:  # pragma: no cover
         text_task = asyncio.create_task(self._text_process_loop(websocket, text_in))
         pause_task = asyncio.create_task(self._pause_monitor(websocket, audio_in))
 
-        done, pending = await asyncio.wait(
-            [receive_task, process_task, text_task, pause_task],
-            return_when=asyncio.FIRST_EXCEPTION,
-        )
-        for t in pending:
-            t.cancel()
-        for t in done:
-            if exc := t.exception():
-                logger.error("pipeline.error", error=str(exc))
-                await self._send_error(websocket, str(exc))
+        # Optional: fire-and-forget session timer — sends warning at T-2min, ends at T-0
+        _duration_task: asyncio.Task | None = None
+        if self._duration_limit_minutes:
+            _duration_task = asyncio.create_task(self._duration_guard(websocket))
+
+        try:
+            done, pending = await asyncio.wait(
+                [receive_task, process_task, text_task, pause_task],
+                return_when=asyncio.FIRST_EXCEPTION,
+            )
+            for t in pending:
+                t.cancel()
+            for t in done:
+                if exc := t.exception():
+                    logger.error("pipeline.error", error=str(exc))
+                    await self._send_error(websocket, str(exc))
+        finally:
+            if _duration_task and not _duration_task.done():
+                _duration_task.cancel()
 
         await self._finalize_session()
+
+    # ── Duration guard ─────────────────────────────────────────────────────────
+
+    async def _duration_guard(self, websocket: WebSocket) -> None:
+        """Enforce the session time limit.
+
+        At T-2 minutes: send a soft-prompt toast warning.
+        At T-0: send session_state=time_limit_reached so the frontend ends gracefully.
+        """
+        if self._duration_limit_minutes is None:
+            return
+        total_seconds = self._duration_limit_minutes * 60
+        warning_delay = total_seconds - 120
+        if warning_delay > 0:
+            await asyncio.sleep(warning_delay)
+            try:
+                await websocket.send_json(
+                    {
+                        "type": "soft_prompt",
+                        "text": "⏱ 2 minutes remaining — please start wrapping up your answer.",
+                    }
+                )
+                logger.info(
+                    "pipeline.duration_warning",
+                    session_id=str(self._session.id),
+                    remaining_s=120,
+                )
+            except Exception:
+                return  # WebSocket already closed — session already ended
+            await asyncio.sleep(120)
+        else:
+            await asyncio.sleep(max(total_seconds, 0))
+        try:
+            await websocket.send_json({"type": "session_state", "state": "time_limit_reached"})
+            logger.info(
+                "pipeline.duration_limit_reached",
+                session_id=str(self._session.id),
+                duration_minutes=self._duration_limit_minutes,
+            )
+        except Exception:
+            pass  # WebSocket already closed — normal if user ended first
 
     # ── Internal loops ─────────────────────────────────────────────────────────
 

@@ -116,6 +116,7 @@ async def create_session(
         persona=body.persona,
         company=body.company,
         focus_skill=body.focus_skill,
+        duration_limit_minutes=body.duration_limit_minutes,
     )
     db.add(session)
     await db.commit()
@@ -569,6 +570,7 @@ async def voice_websocket(
             user_id=user.id,
             company_questions=company_questions,
             candidate_context=candidate_context,
+            duration_limit_minutes=session.duration_limit_minutes,
         )
         await pipeline.run(websocket)
     except WebSocketDisconnect:

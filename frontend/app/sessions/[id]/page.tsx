@@ -399,7 +399,7 @@ export default function SessionPage() {
     .replace(/^https:/, "wss:");
 
   const { state, transcript, latency, waveformData, textMode, connect, disconnect, sendText, updateToolContext, error, softPrompt } =
-    useVoiceSession({ sessionId: id, accessToken, apiBaseUrl: wsBase });
+    useVoiceSession({ sessionId: id, accessToken, apiBaseUrl: wsBase, onTimeLimitReached: handleEnd });
 
   const [sessionInfo, setSessionInfo] = useState<SessionResponse | null>(null);
   const [toolPrefill, setToolPrefill] = useState<{ text: string; seq: number } | undefined>(undefined);
@@ -446,6 +446,24 @@ export default function SessionPage() {
   const hasSplitPanel = !!INTERVIEW_TOOLS[sessionType];
   const questionCount = transcript.filter((e) => e.role === "assistant").length;
   const elapsedStr = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
+
+  // Countdown timer — only when session has a duration limit
+  const durationLimitSeconds = sessionInfo?.duration_limit_minutes
+    ? sessionInfo.duration_limit_minutes * 60
+    : null;
+  const timeRemaining = durationLimitSeconds !== null ? Math.max(0, durationLimitSeconds - elapsed) : null;
+  const countdownStr = timeRemaining !== null
+    ? `${Math.floor(timeRemaining / 60)}:${String(timeRemaining % 60).padStart(2, "0")}`
+    : null;
+  const countdownUrgent = timeRemaining !== null && timeRemaining <= 300;
+
+  // Auto-end when countdown reaches zero
+  useEffect(() => {
+    if (timeRemaining === 0 && isActive) {
+      handleEnd();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, isActive]);
 
   // ── Tool context callbacks — keep AI interviewer aware of board/code ──────
   const isSessionActive = state !== "idle" && state !== "error";
@@ -537,9 +555,13 @@ export default function SessionPage() {
           {isActive && questionCount > 0 && (
             <span className="text-xs font-mono text-slate-400">Q{questionCount}</span>
           )}
-          {isActive && (
+          {isActive && countdownStr !== null ? (
+            <span className={`text-xs font-mono ${countdownUrgent ? "text-red-500 font-semibold" : "text-slate-400"}`}>
+              {countdownStr}
+            </span>
+          ) : isActive ? (
             <span className="text-xs font-mono text-slate-400">{elapsedStr}</span>
-          )}
+          ) : null}
           <span className="text-xs text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5">AI Interviewer</span>
         </div>
         <div className="flex items-center gap-2">

@@ -40,6 +40,7 @@ interface UseVoiceSessionOptions {
   sessionId: string;
   accessToken: string;
   apiBaseUrl?: string;
+  onTimeLimitReached?: () => void;
 }
 
 interface UseVoiceSessionReturn {
@@ -68,6 +69,7 @@ export function useVoiceSession({
   sessionId,
   accessToken,
   apiBaseUrl = "",
+  onTimeLimitReached,
 }: UseVoiceSessionOptions): UseVoiceSessionReturn {
   const [state, setState] = useState<SessionState>("idle");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
@@ -93,6 +95,8 @@ export function useVoiceSession({
   const stateRef = useRef<SessionState>("idle");
   const bargeInCountRef = useRef(0);
   const softPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onTimeLimitReachedRef = useRef(onTimeLimitReached);
+  useEffect(() => { onTimeLimitReachedRef.current = onTimeLimitReached; }, [onTimeLimitReached]);
 
   // ── Audio playback ─────────────────────────────────────────────────────────
 
@@ -221,6 +225,11 @@ export function useVoiceSession({
 
     switch (data.type) {
       case "session_state": {
+        if (data.state === "time_limit_reached") {
+          // Session duration limit expired — trigger the same graceful end as pressing End Session
+          onTimeLimitReachedRef.current?.();
+          break;
+        }
         const newState = data.state as SessionState;
         // Don't let backend "speaking" override — frontend sets "speaking" when audio actually plays
         // Only accept "listening", "processing", and error-like states from backend
