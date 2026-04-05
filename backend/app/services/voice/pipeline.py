@@ -467,7 +467,15 @@ class VoicePipeline:  # pragma: no cover
                     }
                 )
 
-                self._conversation.append({"role": "user", "content": accumulated_text})
+                # Wrap candidate speech in structural delimiters to prevent prompt injection.
+                # A user could speak phrases that look like system instructions; the XML
+                # boundary signals to the LLM that this is candidate content, not directives.
+                self._conversation.append(
+                    {
+                        "role": "user",
+                        "content": f"<candidate_answer>{accumulated_text}</candidate_answer>",
+                    }
+                )
 
                 # Launch LLM+TTS as a cancelable task — if user barges in,
                 # _stt_reader will cancel this task and we'll re-trigger
