@@ -10,6 +10,9 @@ primary_region = "iad"  # US East — closest to Anthropic/Deepgram endpoints
   dockerfile = "Dockerfile"
   dockerfile_target = "production"  # uses multi-stage build
 
+[deploy]
+  release_command = "alembic upgrade head"  # runs before traffic shifts to new version
+
 [env]
   APP_ENV = "production"
   PORT = "8080"
