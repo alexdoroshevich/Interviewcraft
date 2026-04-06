@@ -1,5 +1,6 @@
 """Application configuration loaded from environment / .env file."""
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,6 +51,16 @@ class Settings(BaseSettings):
     # ── Rate limiting (Redis-backed) ───────────────────────────────────────────
     rate_limit_auth_requests: int = 5
     rate_limit_auth_window_seconds: int = 60
+
+    @model_validator(mode="after")
+    def validate_production_secret_key(self) -> "Settings":
+        """Reject the default secret_key in non-development environments."""
+        if self.app_env != "development" and self.secret_key == "changeme-in-production":
+            raise ValueError(
+                "SECRET_KEY must be set to a secure random value in non-development environments. "
+                'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+            )
+        return self
 
     # ── Google OAuth (optional at MVP) ─────────────────────────────────────────
     google_client_id: str = ""

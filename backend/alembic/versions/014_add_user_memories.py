@@ -38,7 +38,7 @@ def upgrade() -> None:
             "memory_document",
             postgresql.JSONB(),
             nullable=False,
-            server_default=text("'{}'::jsonb"),
+            server_default=text("CAST('{}' AS jsonb)"),
         ),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("token_count", sa.Integer(), nullable=False, server_default="0"),

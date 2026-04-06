@@ -11,6 +11,12 @@ from pydantic import BaseModel, ConfigDict
 # ── Story CRUD ────────────────────────────────────────────────────────────────
 
 
+class StoryProposeRequest(BaseModel):
+    """Body for POST /api/v1/stories/propose."""
+
+    session_id: uuid.UUID
+
+
 class StoryCreate(BaseModel):
     """Body for POST /api/v1/stories."""
 

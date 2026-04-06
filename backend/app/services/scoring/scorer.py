@@ -427,7 +427,7 @@ class Scorer:
 
 def _extract_answer_text(transcript: list[dict[str, Any]]) -> str:
     """Concatenate all user turns in the segment transcript."""
-    parts = [t["content"] for t in transcript if t.get("role") in ("user", "assistant")]
+    parts = [t["content"] for t in transcript if t.get("role") == "user"]
     return "\n".join(parts)
 
 

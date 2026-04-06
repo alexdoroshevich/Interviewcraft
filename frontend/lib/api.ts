@@ -596,6 +596,12 @@ export const api = {
         body: JSON.stringify({ email, password }),
       }),
 
+    googleLogin: (idToken: string) =>
+      apiFetch<TokenResponse>("/api/v1/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ id_token: idToken }),
+      }),
+
     me: () => apiFetch<UserResponse>("/api/v1/auth/me"),
   },
 

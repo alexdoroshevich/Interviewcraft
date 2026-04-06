@@ -12,6 +12,7 @@ from app.models.segment_score import SegmentScore
 from app.models.session_metrics import SessionMetrics
 from app.models.share_card import ShareCard
 from app.models.skill_graph_node import SKILL_CATEGORIES, SkillGraphNode, SkillTrend
+from app.models.story import Story
 from app.models.transcript_word import TranscriptWord
 from app.models.usage_log import UsageLog
 from app.models.user import User, UserRole
@@ -35,5 +36,6 @@ __all__ = [
     "SessionMetrics",
     "UsageLog",
     "ShareCard",
+    "Story",
     "UserMemory",
 ]

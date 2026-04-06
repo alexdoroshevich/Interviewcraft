@@ -17,6 +17,7 @@ from pydantic import BaseModel as _BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.middleware.rate_limit import RateLimit
 from app.models.user import User
@@ -392,6 +393,6 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,  # set True behind HTTPS in production
+        secure=settings.app_env == "production",
         max_age=7 * 24 * 60 * 60,
     )

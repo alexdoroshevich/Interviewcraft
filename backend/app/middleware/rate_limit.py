@@ -32,7 +32,6 @@ async def auth_rate_limit(request: Request) -> None:
         if count > settings.rate_limit_auth_requests:
             logger.warning(
                 "auth.rate_limit_exceeded",
-                ip=client_ip,
                 count=count,
                 limit=settings.rate_limit_auth_requests,
             )

@@ -20,7 +20,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import Response as PDFResponse
 from jose import JWTError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -28,6 +28,7 @@ from app.database import get_db
 from app.models.interview_session import InterviewSession, SessionStatus
 from app.models.question import Question
 from app.models.session_metrics import SessionMetrics as _SessionMetrics
+from app.models.usage_log import UsageLog
 from app.models.user import User
 from app.schemas.session import (
     JdAnalysisRequest,
@@ -42,6 +43,7 @@ from app.services.auth.dependencies import CurrentUser
 from app.services.auth.jwt_utils import decode_token
 from app.services.byok import decrypt_byok_keys
 from app.services.memory.loader import load_memory_context
+from app.services.voice.costs import calc_anthropic_cost
 from app.services.voice.pipeline import VoicePipeline
 from app.services.voice.prompts import build_candidate_context_block
 from app.services.voice.provider_factory import ProviderFactory
@@ -73,10 +75,9 @@ async def create_session(
 
     # Count existing sessions for this user
     count_result = await db.execute(
-        select(InterviewSession).where(InterviewSession.user_id == current_user.id)
+        select(func.count(InterviewSession.id)).where(InterviewSession.user_id == current_user.id)
     )
-    existing_sessions = count_result.scalars().all()
-    session_count = len(existing_sessions)
+    session_count: int = count_result.scalar_one()
 
     is_first_session = session_count == 0
 
@@ -262,6 +263,7 @@ _VALID_COMPANIES = frozenset(
 async def analyze_jd(
     body: JdAnalysisRequest,
     current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> JdAnalysisResponse:
     """Analyze a job description and extract structured preparation guidance.
 
@@ -326,6 +328,24 @@ async def analyze_jd(
         )
         for fa in (data.get("focus_areas") or [])
     ]
+
+    cost_usd = calc_anthropic_cost(
+        "claude-haiku-4-5",
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
+    usage_log = UsageLog(
+        user_id=current_user.id,
+        provider="anthropic",
+        operation="jd_analysis",
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+        cost_usd=cost_usd,
+        latency_ms=latency_ms,
+        cached=False,
+    )
+    db.add(usage_log)
+    await db.commit()
 
     logger.info(
         "jd_analysis.complete",

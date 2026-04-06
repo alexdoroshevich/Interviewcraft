@@ -82,6 +82,13 @@ def _scalar(value: object) -> MagicMock:
     return r
 
 
+def _count(n: int) -> MagicMock:
+    """Wrap an integer in a mock that supports .scalar_one() — for COUNT queries."""
+    r = MagicMock()
+    r.scalar_one.return_value = n
+    return r
+
+
 def _scalars_all(values: list) -> MagicMock:
     """Wrap a list in a mock that supports .scalars().all()."""
     r = MagicMock()
@@ -130,8 +137,8 @@ async def test_create_session_behavioral(authed_client, mock_redis) -> None:
     user = _make_user()
     session = _make_session(user.id, type_="behavioral")
 
-    # execute() called once: check for existing sessions → returns one (not first time)
-    db = _mock_db(execute_side_effects=[_scalar(_make_session(user.id))])
+    # execute() called once: COUNT query → 1 existing session (not first time, under limit)
+    db = _mock_db(execute_side_effects=[_count(1)])
 
     # After refresh, set the type so model_validate works
     async def _refresh(s):
@@ -163,8 +170,8 @@ async def test_create_session_first_session_forced_diagnostic(authed_client) -> 
     user = _make_user()
     session = _make_session(user.id, type_="diagnostic")
 
-    # No prior sessions
-    db = _mock_db(execute_side_effects=[_scalar(None)])
+    # No prior sessions — COUNT returns 0
+    db = _mock_db(execute_side_effects=[_count(0)])
 
     async def _refresh(s):
         s.type = "diagnostic"
@@ -353,9 +360,8 @@ async def test_create_session_byok_required_returns_402(authed_client) -> None:
     user = _make_user()
     user.byok_keys = None  # no BYOK keys
 
-    # Return 2 existing sessions so session_count >= free_session_limit
-    sessions = [_make_session(user.id), _make_session(user.id)]
-    db = _mock_db(execute_side_effects=[_scalars_all(sessions)])
+    # COUNT returns 2 so session_count >= free_session_limit
+    db = _mock_db(execute_side_effects=[_count(2)])
 
     with patch("app.api.v1.sessions.settings.anthropic_api_key", ""):
         async with authed_client(db, user) as (client, _):

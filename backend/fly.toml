@@ -3,7 +3,7 @@
 # matching docker-compose (context: ./backend) and keeping COPY paths correct.
 # Deploy: flyctl deploy --config backend/fly.toml --remote-only
 
-app = "your-app-name"  # Replace with your Fly.io app name
+app = "interviewcraft-api"
 primary_region = "iad"  # US East — closest to Anthropic/Deepgram endpoints
 
 [build]
