@@ -562,7 +562,15 @@ export default function SessionPage() {
           ) : isActive ? (
             <span className="text-xs font-mono text-slate-400">{elapsedStr}</span>
           ) : null}
-          <span className="text-xs text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5">AI Interviewer</span>
+          {/* AI disclosure — required by Texas SB 140 and EU AI Act Art. 52 */}
+          <span className="text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              <circle cx="12" cy="16" r="1" fill="currentColor" />
+            </svg>
+            AI-generated voice
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${stateInfo.color}`}>
