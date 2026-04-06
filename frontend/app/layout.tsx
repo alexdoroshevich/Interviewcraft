@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 // Geist is available in Next.js 15+ — using Inter (near-identical) until upgrade
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -34,6 +35,9 @@ export default function RootLayout({
       <body className="font-sans bg-white dark:bg-slate-900 transition-colors duration-200">
         <ThemeProvider><TooltipProvider>{children}</TooltipProvider></ThemeProvider>
         <Toaster richColors position="top-right" />
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+        )}
       </body>
     </html>
   );

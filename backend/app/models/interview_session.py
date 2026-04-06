@@ -25,6 +25,7 @@ class SessionType:
     CODING_DISCUSSION = "coding_discussion"
     NEGOTIATION = "negotiation"
     DIAGNOSTIC = "diagnostic"
+    DEBRIEF = "debrief"
 
 
 class SessionStatus:

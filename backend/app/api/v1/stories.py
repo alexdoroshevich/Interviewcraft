@@ -26,6 +26,7 @@ from app.schemas.stories import (
     CoverageMapResponse,
     StoryCreate,
     StoryProposalResponse,
+    StoryProposeRequest,
     StoryResponse,
     StoryUpdate,
 )
@@ -205,18 +206,17 @@ async def get_coverage_map(
 
 @router.post("/propose", response_model=StoryProposalResponse | None)
 async def propose_story(
-    session_id_body: dict,
+    body: StoryProposeRequest,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StoryProposalResponse | None:
     """Auto-detect and propose a story from a completed session.
 
-    Body: {"session_id": "uuid"}
     Returns null if no story detected or already saved.
     """
     from app.models.interview_session import InterviewSession
 
-    session_id = uuid.UUID(session_id_body["session_id"])
+    session_id = body.session_id
 
     result = await db.execute(
         select(InterviewSession).where(

@@ -13,7 +13,7 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -49,12 +49,12 @@ async def create_share_card(
 
     # ── Session count ──────────────────────────────────────────────────────────
     sessions_result = await db.execute(
-        select(InterviewSession).where(
+        select(func.count(InterviewSession.id)).where(
             InterviewSession.user_id == uid,
             InterviewSession.status == SessionStatus.COMPLETED,
         )
     )
-    session_count = len(list(sessions_result.scalars().all()))
+    session_count: int = sessions_result.scalar_one()
 
     # ── Compute snapshot ───────────────────────────────────────────────────────
     cat_buckets: dict[str, list[int]] = defaultdict(list)

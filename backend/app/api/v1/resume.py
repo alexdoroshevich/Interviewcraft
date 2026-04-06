@@ -8,11 +8,10 @@ PUT  /profile — manually update profile fields
 import io
 import json
 import time
-from decimal import Decimal
 from typing import Annotated
 
-import anthropic
 import structlog
+from anthropic import AsyncAnthropic
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +26,7 @@ from app.schemas.resume import (
     ResumeUploadResponse,
 )
 from app.services.auth.dependencies import CurrentUser
+from app.services.voice.costs import calc_anthropic_cost
 
 logger = structlog.get_logger(__name__)
 
@@ -97,7 +97,7 @@ async def _parse_resume_with_claude(resume_text: str, user: User, db: AsyncSessi
             detail="Anthropic API key not configured",
         )
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     prompt = f"""Analyze this resume text and extract structured data. Return ONLY valid JSON with these fields:
 - experience_years: integer (total years of professional experience, estimate if not explicit)
@@ -115,7 +115,7 @@ Resume text:
     start_ms = time.monotonic_ns() // 1_000_000
 
     try:
-        response = client.messages.create(
+        response = await client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
@@ -129,17 +129,18 @@ Resume text:
 
     latency_ms = (time.monotonic_ns() // 1_000_000) - start_ms
     first_block = response.content[0]
-    if not isinstance(first_block, anthropic.types.TextBlock):
+    from anthropic.types import TextBlock
+
+    if not isinstance(first_block, TextBlock):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Unexpected response format from AI",
         )
     raw_text = first_block.text
 
-    # Calculate cost (Haiku pricing: $0.25/1M input, $1.25/1M output)
     input_tokens = response.usage.input_tokens
     output_tokens = response.usage.output_tokens
-    cost_usd = Decimal(str((input_tokens * 0.25 / 1_000_000) + (output_tokens * 1.25 / 1_000_000)))
+    cost_usd = calc_anthropic_cost("claude-haiku-4-5", input_tokens, output_tokens)
 
     # Log usage
     usage_log = UsageLog(

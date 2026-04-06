@@ -75,8 +75,6 @@ async def get_next_question(
         question = await _select_question(db, [], question_type=type)
 
     if question is None:
-        from fastapi import HTTPException, status
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No questions found. Run the seed script to populate the question bank.",

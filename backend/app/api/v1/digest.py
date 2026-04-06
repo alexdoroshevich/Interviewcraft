@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,8 +23,8 @@ from app.database import get_db
 from app.models.interview_session import InterviewSession
 from app.models.segment_score import SegmentScore
 from app.models.skill_graph_node import SkillGraphNode
-from app.models.user import User, UserRole
-from app.services.auth.dependencies import CurrentUser
+from app.models.user import User
+from app.services.auth.dependencies import CurrentAdmin, CurrentUser
 from app.services.email import DigestStats, build_digest_html, send_email
 
 logger = structlog.get_logger(__name__)
@@ -208,19 +208,13 @@ async def _send_all_digests(db_url: str) -> None:
 @router.post("/send-all", status_code=status.HTTP_202_ACCEPTED)
 async def send_all_digests(
     background_tasks: BackgroundTasks,
-    current_user: CurrentUser,
+    admin: CurrentAdmin,
 ) -> dict:
     """Admin: enqueue weekly digest send to all opted-in users.
 
     Runs asynchronously — returns immediately.
     """
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-
     background_tasks.add_task(_send_all_digests, app_settings.database_url)
-    logger.info("digest.send_all_enqueued", admin_id=str(current_user.id))
+    logger.info("digest.send_all_enqueued", admin_id=str(admin.id))
 
     return {"status": "enqueued", "message": "Digest emails queued for all opted-in users"}

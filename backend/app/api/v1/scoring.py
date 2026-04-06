@@ -224,7 +224,7 @@ async def score_session(
 
     # Persist lint_results summary on the session (merge, don't overwrite)
     if scored_rows:
-        existing_lint = session.lint_results or {}
+        existing_lint = dict(session.lint_results) if session.lint_results else {}
         existing_lint.update(_build_lint_summary(scored_rows))
         existing_lint["skill_graph_updated"] = True
         session.lint_results = existing_lint

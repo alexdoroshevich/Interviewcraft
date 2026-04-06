@@ -164,7 +164,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "BRANCH=$(cd \"$CLAUDE_PROJECT_DIR\" && git branch --show-current 2>/dev/null || echo 'unknown'); COUNTER_FILE=\"/tmp/claude_tool_count_${CLAUDE_SESSION_ID:-$$}\"; COUNT=$(cat \"$COUNTER_FILE\" 2>/dev/null || echo '?'); echo \"{\\\"systemMessage\\\": \\\"Compacting at tool call ~$COUNT on branch $BRANCH. After compaction: next migration=015, CAST(:x AS jsonb), user_id on every query, audio never to disk.\\\"}\"",
+            "command": "BRANCH=$(cd \"$CLAUDE_PROJECT_DIR\" && git branch --show-current 2>/dev/null || echo 'unknown'); COUNTER_FILE=\"/tmp/claude_tool_count_${CLAUDE_SESSION_ID:-$$}\"; COUNT=$(cat \"$COUNTER_FILE\" 2>/dev/null || echo '?'); echo \"{\\\"systemMessage\\\": \\\"Compacting at tool call ~$COUNT on branch $BRANCH. After compaction: next migration=017, CAST(:x AS jsonb), user_id on every query, audio never to disk.\\\"}\"",
             "timeout": 5,
             "statusMessage": "Preparing compaction context..."
           }
@@ -176,7 +176,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\": \"Context compacted. Critical reminders: 1) JSONB mutation: always reassign whole dict. 2) asyncpg: CAST(:param AS jsonb) never ::jsonb. 3) Audio never to disk. 4) Evidence = {start_ms, end_ms} spans. 5) user_id filter on every query. 6) structlog only, never print(). 7) Next migration: 015.\"}'",
+            "command": "echo '{\"systemMessage\": \"Context compacted. Critical reminders: 1) JSONB mutation: always reassign whole dict. 2) asyncpg: CAST(:param AS jsonb) never ::jsonb. 3) Audio never to disk. 4) Evidence = {start_ms, end_ms} spans. 5) user_id filter on every query. 6) structlog only, never print(). 7) Next migration: 017.\"}'",
             "timeout": 5,
             "statusMessage": "Re-injecting critical rules after compaction..."
           }
@@ -188,7 +188,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "BRANCH=$(cd \"$CLAUDE_PROJECT_DIR\" && git branch --show-current 2>/dev/null || echo 'unknown'); echo \"{\\\"systemMessage\\\": \\\"Subagent context — InterviewCraft: FastAPI+SQLAlchemy backend, Next.js+TypeScript frontend. Rules: user_id on every query, CAST(:x AS jsonb) not ::jsonb, audio never to disk, structlog not print(), no TypeScript any. Next migration: 015. Current branch: $BRANCH.\\\"}\"",
+            "command": "BRANCH=$(cd \"$CLAUDE_PROJECT_DIR\" && git branch --show-current 2>/dev/null || echo 'unknown'); echo \"{\\\"systemMessage\\\": \\\"Subagent context — InterviewCraft: FastAPI+SQLAlchemy backend, Next.js+TypeScript frontend. Rules: user_id on every query, CAST(:x AS jsonb) not ::jsonb, audio never to disk, structlog not print(), no TypeScript any. Next migration: 017. Current branch: $BRANCH.\\\"}\"",
             "timeout": 5,
             "statusMessage": "Injecting project context into subagent..."
           }
