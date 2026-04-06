@@ -628,6 +628,24 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ jd_text }),
       }),
+
+    downloadReport: async (id: string): Promise<void> => {
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/api/v1/sessions/${id}/report`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "Download failed");
+        throw new ApiError(res.status, text);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `coaching-report-${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
   },
 
   scoring: {

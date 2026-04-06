@@ -528,6 +528,8 @@ export default function TranscriptPage() {
   const [delivery, setDelivery] = useState<DeliveryAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -642,6 +644,46 @@ export default function TranscriptPage() {
         {isScored && (
           <div className="mt-6 space-y-4">
             <ScoreSummary scores={scores} />
+
+            {/* Download coaching report */}
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={async () => {
+                  setReportLoading(true);
+                  setReportError(null);
+                  try {
+                    await api.sessions.downloadReport(id);
+                  } catch (e) {
+                    setReportError(e instanceof Error ? e.message : "Report generation failed. Try again.");
+                  } finally {
+                    setReportLoading(false);
+                  }
+                }}
+                disabled={reportLoading}
+                className="btn-secondary flex items-center justify-center gap-2 text-sm py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {reportLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-indigo-500" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Generating PDF report… (up to 2 min)
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download Coaching Report (PDF)
+                  </>
+                )}
+              </button>
+              {reportError && (
+                <p className="text-xs text-rose-500 text-center">{reportError}</p>
+              )}
+            </div>
+
             {metrics && <LatencyPanel m={metrics} />}
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1 pt-2">
               Question-by-question breakdown
