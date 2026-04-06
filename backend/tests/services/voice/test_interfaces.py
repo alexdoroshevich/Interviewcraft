@@ -257,7 +257,9 @@ def test_anthropic_cost_sonnet():
 def test_haiku_alias_and_dated_id_same_cost():
     """Non-dated alias and legacy dated ID must resolve to identical pricing."""
     alias = calc_anthropic_cost("claude-haiku-4-5", input_tokens=1_000_000, output_tokens=100_000)
-    dated = calc_anthropic_cost("claude-haiku-4-5-20251001", input_tokens=1_000_000, output_tokens=100_000)
+    dated = calc_anthropic_cost(
+        "claude-haiku-4-5-20251001", input_tokens=1_000_000, output_tokens=100_000
+    )
     assert alias == dated
 
 
