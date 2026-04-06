@@ -378,3 +378,35 @@ async def test_build_memory_returns_false_when_no_segments() -> None:
 
     result = await build_memory(db, session, session.user_id, "")
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_consolidate_memory_returns_false_when_no_row() -> None:
+    """consolidate_memory is a no-op when user_memories row does not exist."""
+    from app.services.memory.builder import consolidate_memory
+
+    db = AsyncMock()
+    row_result = MagicMock()
+    row_result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=row_result)
+
+    result = await consolidate_memory(db, uuid.uuid4(), "fake-key")
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_consolidate_memory_skips_when_job_already_pending() -> None:
+    """consolidate_memory is a no-op when batch_job_id is already set."""
+    from app.services.memory.builder import consolidate_memory
+
+    memory_row = MagicMock()
+    memory_row.memory_document = {"recurring_mistakes": ["test mistake"]}
+    memory_row.batch_job_id = "msgbatch_existing123"
+
+    db = AsyncMock()
+    row_result = MagicMock()
+    row_result.scalar_one_or_none.return_value = memory_row
+    db.execute = AsyncMock(return_value=row_result)
+
+    result = await consolidate_memory(db, uuid.uuid4(), "fake-key")
+    assert result is False
