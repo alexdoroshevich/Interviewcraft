@@ -254,6 +254,22 @@ def test_anthropic_cost_sonnet():
     assert float(cost) > 0
 
 
+def test_haiku_alias_and_dated_id_same_cost():
+    """Non-dated alias and legacy dated ID must resolve to identical pricing."""
+    alias = calc_anthropic_cost("claude-haiku-4-5", input_tokens=1_000_000, output_tokens=100_000)
+    dated = calc_anthropic_cost(
+        "claude-haiku-4-5-20251001", input_tokens=1_000_000, output_tokens=100_000
+    )
+    assert alias == dated
+
+
+def test_unknown_model_raises():
+    import pytest
+
+    with pytest.raises(ValueError, match="Unknown Anthropic model"):
+        calc_anthropic_cost("claude-unknown-model", input_tokens=100, output_tokens=10)
+
+
 def test_anthropic_cost_cached_is_cheaper():
     full = calc_anthropic_cost("claude-sonnet-4-6", input_tokens=1000, output_tokens=200)
     cached = calc_anthropic_cost(
