@@ -54,6 +54,12 @@
             "command": "cat \"$CLAUDE_PROJECT_DIR/.claude/rules/architecture.md\" \"$CLAUDE_PROJECT_DIR/.claude/rules/code-quality.md\" \"$CLAUDE_PROJECT_DIR/.claude/rules/security.md\" 2>/dev/null | head -200 || true",
             "timeout": 5,
             "statusMessage": "Loading project context..."
+          },
+          {
+            "type": "command",
+            "command": "REPOMIX_OUT=\"$CLAUDE_PROJECT_DIR/.claude/repomix-output.xml\"; cd \"$CLAUDE_PROJECT_DIR\"; python3 -c \"import os,time,sys; f=sys.argv[1]; exit(0 if os.path.exists(f) and time.time()-os.path.getmtime(f)<86400 else 1)\" \"$REPOMIX_OUT\" 2>/dev/null || npx repomix --config repomix.config.json 2>/dev/null || true; STATS=$(python3 -c \"import os,sys; f=sys.argv[1]; s=os.path.getsize(f)//1024 if os.path.exists(f) else 0; c=open(f).read().count('<file ') if s else 0; print(f'{c} files, {s}KB') if s else print('')\" \"$REPOMIX_OUT\" 2>/dev/null || echo ''); [ -n \"$STATS\" ] && echo \"{\\\"systemMessage\\\": \\\"Repomix snapshot ready ($STATS). Attach .claude/repomix-output.xml to any subagent for full codebase context.\\\"}\" || true",
+            "timeout": 120,
+            "statusMessage": "Refreshing codebase snapshot (repomix)..."
           }
         ]
       }
