@@ -60,6 +60,12 @@
             "command": "REPOMIX_OUT=\"$CLAUDE_PROJECT_DIR/.claude/repomix-output.xml\"; cd \"$CLAUDE_PROJECT_DIR\"; python3 -c \"import os,time,sys; f=sys.argv[1]; exit(0 if os.path.exists(f) and time.time()-os.path.getmtime(f)<86400 else 1)\" \"$REPOMIX_OUT\" 2>/dev/null || npx repomix --config repomix.config.json 2>/dev/null || true; STATS=$(python3 -c \"import os,sys; f=sys.argv[1]; s=os.path.getsize(f)//1024 if os.path.exists(f) else 0; c=open(f).read().count('<file ') if s else 0; print(f'{c} files, {s}KB') if s else print('')\" \"$REPOMIX_OUT\" 2>/dev/null || echo ''); [ -n \"$STATS\" ] && echo \"{\\\"systemMessage\\\": \\\"Repomix snapshot ready ($STATS). Attach .claude/repomix-output.xml to any subagent for full codebase context.\\\"}\" || true",
             "timeout": 120,
             "statusMessage": "Refreshing codebase snapshot (repomix)..."
+          },
+          {
+            "type": "command",
+            "command": "SESSION_FILE=\"$CLAUDE_PROJECT_DIR/.claude/sessions/last-session.json\"; [ -f \"$SESSION_FILE\" ] && F=\"$SESSION_FILE\" python3 -c \"import json,os,time; f=os.environ['F']; d=json.load(open(f)); age=int((time.time()-os.path.getmtime(f))/60); b=d.get('branch','?'); uc=d.get('uncommitted_count',0); rc=d.get('recent_commits',''); prs=d.get('open_prs',''); parts=['branch='+b]; uc and parts.append(str(uc)+' uncommitted file(s)'); rc and parts.append('commits: '+rc.replace('|',', ')); prs and parts.append('open PRs: '+prs); print(json.dumps({'systemMessage':'Last session '+str(age)+'min ago — '+', '.join(parts)+'.'}))\" 2>/dev/null || true",
+            "timeout": 5,
+            "statusMessage": "Injecting last-session context..."
           }
         ]
       }
@@ -69,8 +75,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "mkdir -p \"$CLAUDE_PROJECT_DIR/.claude/sessions\" && BRANCH=$(cd \"$CLAUDE_PROJECT_DIR\" && git branch --show-current 2>/dev/null || echo 'unknown') && DIRTY=$(cd \"$CLAUDE_PROJECT_DIR\" && git status --short 2>/dev/null | wc -l | tr -d ' ' || echo '0') && echo \"{\\\"ended_at\\\": \\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\", \\\"branch\\\": \\\"$BRANCH\\\", \\\"uncommitted_files\\\": $DIRTY}\" > \"$CLAUDE_PROJECT_DIR/.claude/sessions/last-session.json\" 2>/dev/null || true",
-            "timeout": 5,
+            "command": "mkdir -p \"$CLAUDE_PROJECT_DIR/.claude/sessions\" && cd \"$CLAUDE_PROJECT_DIR\" && BRANCH=$(git branch --show-current 2>/dev/null || echo unknown) && DIRTY_COUNT=$(git status --short 2>/dev/null | wc -l | tr -d ' ' || echo 0) && DIRTY_FILES=$(git status --short 2>/dev/null | awk '{print $2}' | head -20 | tr '\\n' ',' | sed 's/,$//') && RECENT=$(git log --oneline -3 2>/dev/null | tr '\\n' '|' | sed 's/|$//') && OPEN_PRS=$(gh pr list --state open --json number,title --jq '[.[0:5][] | \"#\" + (.number|tostring) + \": \" + .title] | join(\", \")' 2>/dev/null || echo '') && BRANCH=\"$BRANCH\" DIRTY=\"$DIRTY_COUNT\" FILES=\"$DIRTY_FILES\" RECENT=\"$RECENT\" PRS=\"$OPEN_PRS\" ENDED=\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" python3 -c \"import json,os; d={'ended_at':os.environ.get('ENDED',''),'branch':os.environ.get('BRANCH',''),'uncommitted_count':int(os.environ.get('DIRTY','0') or 0),'changed_files':[x for x in os.environ.get('FILES','').split(',') if x],'recent_commits':os.environ.get('RECENT',''),'open_prs':os.environ.get('PRS','')}; print(json.dumps(d))\" > \"$CLAUDE_PROJECT_DIR/.claude/sessions/last-session.json\" 2>/dev/null || true",
+            "timeout": 15,
             "statusMessage": "Saving session state..."
           }
         ]
@@ -110,8 +116,9 @@
         "matcher": "Bash",
         "hooks": [
           {
+            "if": "Bash(git push *)",
             "type": "command",
-            "command": "input=$(cat); cmd=$(echo \"$input\" | python3 -c \"import sys,json; d=json.loads(sys.stdin.read()); print(d.get('tool_input',{}).get('command',''))\" 2>/dev/null || echo ''); if echo \"$cmd\" | grep -qE '^git\\s+push\\s+(origin\\s+)?(main|master)\\b'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Direct push to main/master is blocked. Create a feature branch and open a PR instead.\"}}'; fi",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | python3 -c \"import sys,json; d=json.loads(sys.stdin.read()); print(d.get('tool_input',{}).get('command',''))\" 2>/dev/null || echo ''); if echo \"$cmd\" | grep -qE 'origin\\s+(main|master)\\b|(main|master)\\s*$'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Direct push to main/master is blocked. Create a feature branch and open a PR instead.\"}}'; fi || true",
             "timeout": 5,
             "statusMessage": "Checking branch guard..."
           }
