@@ -111,10 +111,9 @@ async def test_create_share_card_success_returns_201(
     skills_result = MagicMock()
     skills_result.scalars.return_value.all.return_value = [node1, node2]
 
-    # Build mock completed session
-    mock_session = MagicMock()
+    # COUNT of completed sessions → scalar_one() returns 1
     sessions_result = MagicMock()
-    sessions_result.scalars.return_value.all.return_value = [mock_session]
+    sessions_result.scalar_one.return_value = 1
 
     mock_db.execute = AsyncMock(side_effect=[skills_result, sessions_result])
 
