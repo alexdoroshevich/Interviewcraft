@@ -42,7 +42,7 @@ class OpenAILLMProvider(LLMProvider):
         self.model = model
         self._last_metrics: LLMMetrics | None = None
 
-    async def generate_stream(  # type: ignore[override]
+    async def generate_stream(
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
@@ -68,7 +68,7 @@ class OpenAILLMProvider(LLMProvider):
         stream = await self._client.chat.completions.create(  # type: ignore[call-overload]
             model=self.model,
             max_tokens=max_tokens,
-            messages=openai_messages,  # type: ignore[arg-type]
+            messages=openai_messages,
             stream=True,
             stream_options={"include_usage": True},
         )
@@ -124,7 +124,7 @@ class OpenAILLMProvider(LLMProvider):
         response = await self._client.chat.completions.create(  # type: ignore[call-overload]
             model=self.model,
             max_tokens=max_tokens,
-            messages=openai_messages,  # type: ignore[arg-type]
+            messages=openai_messages,
             tools=[
                 {
                     "type": "function",

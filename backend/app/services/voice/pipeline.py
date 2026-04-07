@@ -141,7 +141,7 @@ class VoicePipeline:  # pragma: no cover
         self._low_confidence_count = 0  # Consecutive low-confidence STT finals
         self._llm_lock = asyncio.Lock()  # Prevent concurrent LLM+TTS turns
         self._interrupted = asyncio.Event()  # Barge-in: user interrupted bot
-        self._llm_task: asyncio.Task | None = None  # Cancelable LLM+TTS task
+        self._llm_task: asyncio.Task[None] | None = None  # Cancelable LLM+TTS task
         self._tts_fallback_active = False  # True if primary TTS failed, using Deepgram
         self._tts_fallback_reason = ""  # "auth" if ElevenLabs 401, else "error"
         self._carryover_text = ""  # Cross-loop: text from [WAIT] turn, prepended to next input
@@ -190,7 +190,7 @@ class VoicePipeline:  # pragma: no cover
         pause_task = asyncio.create_task(self._pause_monitor(websocket, audio_in))
 
         # Optional: fire-and-forget session timer — sends warning at T-2min, ends at T-0
-        _duration_task: asyncio.Task | None = None
+        _duration_task: asyncio.Task[None] | None = None
         if self._duration_limit_minutes:
             _duration_task = asyncio.create_task(self._duration_guard(websocket))
 
@@ -568,7 +568,7 @@ class VoicePipeline:  # pragma: no cover
                     return True
 
                 self._llm_task = asyncio.create_task(
-                    _do_llm_turn(lat, pending_finals, accumulated_text)
+                    _do_llm_turn(lat, pending_finals, accumulated_text)  # type: ignore[arg-type]
                 )
                 try:
                     await self._llm_task
@@ -813,7 +813,7 @@ class VoicePipeline:  # pragma: no cover
         self._conversation.append({"role": "assistant", "content": full_response})
 
         # Log LLM usage
-        metrics = self._providers.voice_llm.get_last_metrics()  # type: ignore[attr-defined]
+        metrics = self._providers.voice_llm.get_last_metrics()
         if metrics:
             await self._log_llm_cost(metrics)
 

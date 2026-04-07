@@ -9,6 +9,7 @@ Admin-only:
 
 from __future__ import annotations
 
+import typing
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
@@ -143,7 +144,7 @@ async def preview_digest(
 async def send_digest_to_self(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Send the weekly digest email to the current user immediately.
 
     Returns 202 whether SMTP is configured or not (check logs for delivery status).
@@ -209,7 +210,7 @@ async def _send_all_digests(db_url: str) -> None:
 async def send_all_digests(
     background_tasks: BackgroundTasks,
     admin: CurrentAdmin,
-) -> dict:
+) -> dict[str, typing.Any]:
     """Admin: enqueue weekly digest send to all opted-in users.
 
     Runs asynchronously — returns immediately.

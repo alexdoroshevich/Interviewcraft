@@ -7,6 +7,7 @@ POST /api/v1/companies/{company}/intel/{id}/upvote — upvote a tip
 
 from __future__ import annotations
 
+import typing
 import uuid
 from typing import Annotated
 
@@ -170,7 +171,7 @@ async def upvote_intel(
     intel_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Increment the upvote count on an intel item."""
     result = await db.execute(
         select(CompanyIntel).where(

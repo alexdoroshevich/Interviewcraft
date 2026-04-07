@@ -12,6 +12,7 @@ WebSocket:
 
 from __future__ import annotations
 
+import typing
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
@@ -156,7 +157,7 @@ async def list_sessions(
 # NOTE: must be declared before /{session_id} routes so FastAPI doesn't treat
 # "analyze-jd" as a session_id path parameter.
 
-_JD_TOOL_SCHEMA: dict = {
+_JD_TOOL_SCHEMA: dict[str, typing.Any] = {
     "name": "analyze_jd",
     "description": "Extract structured information from a job description",
     "input_schema": {
@@ -289,8 +290,8 @@ async def analyze_jd(
             model="claude-haiku-4-5",
             max_tokens=1024,
             system=_JD_SYSTEM,
-            tools=[_JD_TOOL_SCHEMA],  # type: ignore[list-item]
-            tool_choice={"type": "tool", "name": "analyze_jd"},  # type: ignore[arg-type]
+            tools=[_JD_TOOL_SCHEMA],
+            tool_choice={"type": "tool", "name": "analyze_jd"},
             messages=[
                 {
                     "role": "user",
@@ -437,7 +438,7 @@ async def get_session_metrics(
     session_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Return aggregated latency metrics for a session (STT/LLM/TTS/E2E p50/p95)."""
     await _get_owned_session(db, session_id, current_user.id)
 

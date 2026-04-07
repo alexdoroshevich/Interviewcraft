@@ -4,6 +4,8 @@ Prompts are designed for Anthropic prompt caching:
 the static system prompt is the cached prefix (target cache hit rate >70%).
 """
 
+from typing import Any
+
 from app.services.voice.company_playbooks import get_company_prompt
 
 # Shared instruction prepended to all interview prompts.
@@ -313,7 +315,7 @@ You are a skeptical, exacting interviewer at a top-tier company. Your bar is L6/
 _PERSONA_NEUTRAL = ""  # Neutral = default behavior, no additional instructions
 
 
-def build_candidate_context_block(resume: dict) -> str:
+def build_candidate_context_block(resume: dict[str, Any]) -> str:
     """Build a CANDIDATE BACKGROUND prompt block from a parsed resume dict.
 
     Args:

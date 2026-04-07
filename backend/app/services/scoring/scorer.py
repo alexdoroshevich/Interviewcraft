@@ -393,7 +393,7 @@ class Scorer:
         response = await self._client.messages.create(  # type: ignore[call-overload]
             model=self._scoring_model,
             max_tokens=max_tok,
-            system=system_blocks,  # type: ignore[arg-type]
+            system=system_blocks,
             messages=[{"role": "user", "content": dynamic_prompt}],
             tools=[
                 {

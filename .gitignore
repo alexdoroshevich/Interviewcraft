@@ -93,3 +93,7 @@ fly.staging.toml
 
 # Windows crash dumps
 bash.exe.stackdump
+
+# k6 load test results
+k6/results.json
+.env.k6

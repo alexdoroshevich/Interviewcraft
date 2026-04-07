@@ -1,5 +1,6 @@
 """InterviewCraft — FastAPI application entry point."""
 
+import typing
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -38,7 +39,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # type: ignore[type-arg]
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Application lifespan — startup and shutdown hooks."""
     logger.info("interviewcraft.startup", env=settings.app_env, debug=settings.debug)
     yield
@@ -88,7 +89,7 @@ app.include_router(companies_router)
 @app.get("/health", tags=["ops"])
 async def health_check(
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Readiness probe — checks process is up AND database is reachable.
 
     Used by Docker healthcheck, Railway/Fly.io, and load balancers.

@@ -48,7 +48,7 @@ class DeepgramSTTProvider(STTProvider):
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
 
-    async def transcribe_stream(  # type: ignore[override]
+    async def transcribe_stream(
         self,
         audio_chunks: AsyncGenerator[bytes],
     ) -> AsyncGenerator[TranscriptChunk]:

@@ -8,6 +8,7 @@ PUT  /profile — manually update profile fields
 import io
 import json
 import time
+import typing
 from typing import Annotated
 
 import structlog
@@ -89,7 +90,9 @@ def _extract_text_from_docx(file_bytes: bytes) -> str:
         )
 
 
-async def _parse_resume_with_claude(resume_text: str, user: User, db: AsyncSession) -> dict:
+async def _parse_resume_with_claude(
+    resume_text: str, user: User, db: AsyncSession
+) -> dict[str, typing.Any]:
     """Call Claude Haiku to extract structured profile from resume text."""
     if not settings.anthropic_api_key:
         raise HTTPException(
@@ -179,7 +182,7 @@ Resume text:
             detail="AI returned invalid JSON — please try again",
         )
 
-    return parsed
+    return parsed if isinstance(parsed, dict) else {}
 
 
 # ── POST /upload ──────────────────────────────────────────────────────────────

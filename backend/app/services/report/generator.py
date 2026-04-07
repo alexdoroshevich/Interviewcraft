@@ -77,7 +77,7 @@ async def generate_session_pdf(
         cached = await redis.get(cache_key)
         if cached is not None:
             logger.debug("report.cache_hit", session_id=str(session_id))
-            return cached
+            return str(cached)
     except Exception as exc:
         logger.warning("report.cache_read_failed", error=str(exc))
 
@@ -190,7 +190,8 @@ async def download_report_pdf(file_id: str, api_key: str) -> bytes:
 
     client = AsyncAnthropic(api_key=api_key)
     response = await client.beta.files.content(file_id)  # type: ignore[attr-defined]
-    return response.read()  # type: ignore[union-attr]
+    data: bytes = response.read()
+    return data
 
 
 def _format_segments(segments: list[SegmentScore]) -> str:
@@ -229,12 +230,12 @@ def _extract_file_id(response: Any) -> str | None:
                         "file_id"
                     )
                     if fid:
-                        return fid
+                        return str(fid)
         # Some SDK versions surface file_id directly on a block
         if hasattr(block, "file_id") and block.file_id:
-            return block.file_id
+            return str(block.file_id)
         # Check for nested source dict
         source = getattr(block, "source", None)
         if isinstance(source, dict) and source.get("file_id"):
-            return source["file_id"]
+            return str(source["file_id"])
     return None

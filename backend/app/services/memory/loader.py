@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import uuid
+from typing import Any
 
 import structlog
 from sqlalchemy import func, select
@@ -132,8 +133,8 @@ def _cache_miss(redis: object | None, cache_key: str) -> None:
 async def _bootstrap_from_skills(
     db: AsyncSession,
     user_id: uuid.UUID,
-    doc: dict,
-) -> dict:
+    doc: dict[str, Any],
+) -> dict[str, Any]:
     """Bootstrap memory document from existing skill_graph data.
 
     Used before the MemoryBuilder has run. Provides immediate value by
@@ -184,7 +185,7 @@ async def _bootstrap_from_skills(
     return doc
 
 
-def _format_memory_block(doc: dict) -> str:
+def _format_memory_block(doc: dict[str, Any]) -> str:
     """Format memory document into the system prompt injection block."""
     total = doc.get("total_sessions", 0)
     if total == 0:

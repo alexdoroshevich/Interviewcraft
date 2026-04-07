@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.interview_session import InterviewSession
 from app.models.segment_score import SegmentScore
 from app.models.skill_graph_node import SkillGraphNode
+from app.models.story import Story
 from app.models.user_memory import UserMemory
 from app.services.usage import log_usage
 from app.services.voice.costs import calc_anthropic_cost
@@ -294,26 +295,53 @@ async def _merge_extraction(
     # ── Story ───────────────────────────────────────────────────────
     story_data = extraction.get("story_detected", {})
     if story_data.get("found") and story_data.get("title"):
-        existing_stories: list[dict] = list(doc.get("best_stories", []))
         avg_score = sum(s.overall_score for s in segments) // len(segments) if segments else 0
-        found_existing = False
-        for s in existing_stories:
-            if s.get("title", "").lower() == story_data["title"].lower():
-                s["best_score"] = max(s.get("best_score", 0), avg_score)
-                if story_data.get("tip"):
-                    s["tip"] = story_data["tip"]
-                found_existing = True
-                break
-        if not found_existing:
-            existing_stories.append(
-                {
-                    "title": story_data["title"],
-                    "best_score": avg_score,
-                    "competencies": story_data.get("competencies", []),
-                    "tip": story_data.get("tip"),
-                }
+        # Upsert into stories table so score ranking stays authoritative
+        existing_row = await db.execute(
+            select(Story).where(
+                Story.user_id == user_id,
+                Story.title == story_data["title"],
             )
-        doc["best_stories"] = existing_stories[-4:]
+        )
+        story_row = existing_row.scalar_one_or_none()
+        if story_row is not None:
+            story_row.best_score_with_this_story = max(
+                story_row.best_score_with_this_story or 0, avg_score
+            )
+            story_row.times_used += 1
+        else:
+            story_row = Story(
+                user_id=user_id,
+                title=story_data["title"],
+                summary=story_data.get("tip") or story_data["title"],
+                competencies=story_data.get("competencies", []),
+                best_score_with_this_story=avg_score,
+                times_used=1,
+                auto_detected=True,
+                source_session_id=session.id,
+            )
+            db.add(story_row)
+        await db.flush()  # ensure row exists before the ranking query
+
+        # Rebuild best_stories from DB — top 4 by best score (score-ranked, not insertion order)
+        # Only rebuild when a story was detected; otherwise leave existing list unchanged.
+        top_stories_result = await db.execute(
+            select(Story)
+            .where(Story.user_id == user_id)
+            .order_by(Story.best_score_with_this_story.desc().nulls_last())
+            .limit(4)
+        )
+        top_stories = top_stories_result.scalars().all()
+        if top_stories:
+            doc["best_stories"] = [
+                {
+                    "title": s.title,
+                    "best_score": s.best_score_with_this_story or 0,
+                    "competencies": s.competencies,
+                    "tip": s.summary if s.summary != s.title else None,
+                }
+                for s in top_stories
+            ]
 
     # ── Communication notes ─────────────────────────────────────────
     comm_notes: list[str] = extraction.get("communication_observations", [])
@@ -327,7 +355,7 @@ async def _merge_extraction(
     # ── Coaching insights ───────────────────────────────────────────
     coaching = extraction.get("coaching_observation")
     if coaching:
-        existing_coaching: list[dict] = list(doc.get("coaching_insights", []))
+        existing_coaching: list[dict[str, Any]] = list(doc.get("coaching_insights", []))
         found = False
         for ci in existing_coaching:
             if _similar_insight(ci.get("insight", ""), coaching):
@@ -556,6 +584,43 @@ async def apply_consolidation_batch(
         return False
 
     return True
+
+
+async def search_stories_fts(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    query: str,
+    limit: int = 4,
+) -> list[Story]:
+    """Find user stories using PostgreSQL FTS, ranked by best score.
+
+    Uses the ix_stories_fts GIN index (migration 018).
+    Falls back to score-only ranking when query is empty.
+    """
+    from sqlalchemy import func as sa_func
+
+    if not query.strip():
+        result = await db.execute(
+            select(Story)
+            .where(Story.user_id == user_id)
+            .order_by(Story.best_score_with_this_story.desc().nulls_last())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    result = await db.execute(
+        select(Story)
+        .where(
+            Story.user_id == user_id,
+            sa_func.to_tsvector(
+                "english",
+                sa_func.coalesce(Story.title, "") + " " + sa_func.coalesce(Story.summary, ""),
+            ).op("@@")(sa_func.plainto_tsquery("english", query)),
+        )
+        .order_by(Story.best_score_with_this_story.desc().nulls_last())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
 
 
 def _similar_insight(existing: str, new: str) -> bool:

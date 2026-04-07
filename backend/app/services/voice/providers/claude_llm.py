@@ -48,7 +48,7 @@ class ClaudeLLMProvider(LLMProvider):
                 note="Scoring is calibrated to claude-sonnet-4-6; variance may increase",
             )
 
-    async def generate_stream(  # type: ignore[override]
+    async def generate_stream(
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
@@ -107,7 +107,7 @@ class ClaudeLLMProvider(LLMProvider):
         """
         start = time.monotonic()
 
-        response = await self._client.messages.create(  # type: ignore[call-overload]
+        response = await self._client.messages.create(
             model=self.model,
             max_tokens=max_tokens,
             messages=cast(list[MessageParam], messages),

@@ -14,6 +14,7 @@ Architecture:
 from __future__ import annotations
 
 import asyncio
+import typing
 import uuid
 from decimal import Decimal
 from typing import Annotated
@@ -121,8 +122,8 @@ async def score_session(
 
     # Score all segments in parallel for ~3x speedup
     async def _score_one(
-        idx: int, question: str, answer_turns: list[dict]
-    ) -> tuple[int, str, list[dict], ScoringResult]:
+        idx: int, question: str, answer_turns: list[dict[str, typing.Any]]
+    ) -> tuple[int, str, list[dict[str, typing.Any]], ScoringResult]:
         return (
             idx,
             question,
@@ -285,7 +286,7 @@ async def play_ideal_answer(
     segment_index: int,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Generate TTS audio for the ideal answer version of a scored segment.
 
     Returns base64-encoded MP3 audio for browser playback.
@@ -454,8 +455,8 @@ _MIN_ANSWER_WORDS = 15  # Skip greetings, short acknowledgments — not worth sc
 
 
 def _extract_qa_segments(
-    transcript: list[dict],
-) -> list[tuple[str, list[dict]]]:
+    transcript: list[dict[str, typing.Any]],
+) -> list[tuple[str, list[dict[str, typing.Any]]]]:
     """Split transcript into (question, answer_turns) pairs.
 
     The transcript is a list of {role, content, ts_ms} dicts.
@@ -465,9 +466,9 @@ def _extract_qa_segments(
     Segments where the user's total answer is < _MIN_ANSWER_WORDS words are
     skipped — this filters out greeting exchanges like "Hi, I'm ready to start."
     """
-    segments: list[tuple[str, list[dict]]] = []
+    segments: list[tuple[str, list[dict[str, typing.Any]]]] = []
     current_question: str | None = None
-    current_answer: list[dict] = []
+    current_answer: list[dict[str, typing.Any]] = []
 
     for turn in transcript:
         role = turn.get("role", "")
@@ -499,7 +500,7 @@ def _extract_qa_segments(
     return segments
 
 
-def _turns_to_text(turns: list[dict]) -> str:
+def _turns_to_text(turns: list[dict[str, typing.Any]]) -> str:
     return " ".join(t.get("content", "") for t in turns if t.get("role") == "user")
 
 
@@ -515,7 +516,7 @@ def _calc_segment_cost(result: object) -> Decimal:
     )
 
 
-def _build_lint_summary(rows: list[SegmentScore]) -> dict:
+def _build_lint_summary(rows: list[SegmentScore]) -> dict[str, typing.Any]:
     """Build the session.lint_results summary from scored segments."""
     return {
         "segments_scored": len(rows),

@@ -7,6 +7,7 @@ Security:
 - 5 req/min per IP rate limit on all auth endpoints
 """
 
+import typing
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -281,7 +282,7 @@ async def forgot_password(
     body: ForgotPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     _rl: RateLimit,
-) -> dict:
+) -> dict[str, typing.Any]:
     """Request a password reset.
 
     Always returns 200 regardless of whether the email exists (security best practice).
@@ -352,7 +353,7 @@ async def reset_password(
     body: ResetPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     _rl: RateLimit,
-) -> dict:
+) -> dict[str, typing.Any]:
     """Reset the user's password using a valid reset token."""
     try:
         payload = decode_token(body.token)
