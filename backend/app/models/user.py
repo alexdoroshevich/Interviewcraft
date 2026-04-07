@@ -80,4 +80,4 @@ class User(Base):
         return datetime.now(tz=UTC) < self.locked_until
 
     def __repr__(self) -> str:
-        return f"<User id={self.id} email={self.email} role={self.role}>"
+        return f"<User id={self.id} role={self.role}>"

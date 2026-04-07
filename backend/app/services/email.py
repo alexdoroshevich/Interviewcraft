@@ -23,6 +23,14 @@ from app.config import Settings
 logger = structlog.get_logger(__name__)
 
 
+def _mask_email(email: str) -> str:
+    """Mask email address for safe logging: alice@example.com → a***@example.com."""
+    if "@" not in email:
+        return "***"
+    local, domain = email.split("@", 1)
+    return f"{local[0]}***@{domain}" if local else f"***@{domain}"
+
+
 # ── Data class for digest content ─────────────────────────────────────────────
 
 
@@ -275,7 +283,7 @@ async def send_email(
     Never raises — logs errors instead.
     """
     if not config.smtp_host:
-        logger.warning("email.smtp_not_configured", to=to_email, subject=subject)
+        logger.warning("email.smtp_not_configured", to=_mask_email(to_email), subject=subject)
         return False
 
     loop = asyncio.get_event_loop()
@@ -290,8 +298,8 @@ async def send_email(
                 config=config,
             ),
         )
-        logger.info("email.sent", to=to_email, subject=subject)
+        logger.info("email.sent", to=_mask_email(to_email), subject=subject)
         return True
     except Exception as exc:
-        logger.error("email.send_failed", to=to_email, error=str(exc))
+        logger.error("email.send_failed", to=_mask_email(to_email), error=str(exc))
         return False

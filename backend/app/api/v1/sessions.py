@@ -295,7 +295,7 @@ async def analyze_jd(
             messages=[
                 {
                     "role": "user",
-                    "content": f"Analyze this job description:\n\n{body.jd_text[:6000]}",
+                    "content": f"Analyze this job description:\n\n<job_description>\n{body.jd_text[:6000]}\n</job_description>",
                 }
             ],
         )
