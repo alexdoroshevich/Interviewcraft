@@ -128,7 +128,15 @@ class DrillPlanner:
         # Scale slot count and questions-per-slot based on days until interview
         if days_until is not None and days_until <= 7:
             # Critical — daily drilling, double questions
-            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            day_names = [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+            ]
             max_slots = min(7, len(ranked))
             base_questions = 3
         elif days_until is not None and days_until <= 21:

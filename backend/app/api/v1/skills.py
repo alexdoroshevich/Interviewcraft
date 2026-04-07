@@ -11,13 +11,13 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Annotated
 
-from sqlalchemy import select
-
 import structlog
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.models.skill_graph_node import SkillGraphNode
 from app.schemas.skills import (
     BeatYourBestItem,
     BenchmarkResponse,
@@ -29,7 +29,6 @@ from app.schemas.skills import (
     SkillNodeResponse,
 )
 from app.services.auth.dependencies import CurrentUser
-from app.models.skill_graph_node import SkillGraphNode
 from app.services.memory.drill_planner import drill_planner
 from app.services.memory.skill_graph import skill_graph_service
 
@@ -205,8 +204,7 @@ async def get_benchmark(
 
     # Per-user overall avg score
     user_avgs: dict = {
-        uid: sum(n.current_score for n in nodes) / len(nodes)
-        for uid, nodes in user_nodes.items()
+        uid: sum(n.current_score for n in nodes) / len(nodes) for uid, nodes in user_nodes.items()
     }
 
     # Per-user per-category avg
@@ -215,9 +213,7 @@ async def get_benchmark(
         cat_map: dict[str, list[int]] = defaultdict(list)
         for n in nodes:
             cat_map[n.skill_category].append(n.current_score)
-        user_cat_avgs[uid] = {
-            cat: sum(scores) / len(scores) for cat, scores in cat_map.items()
-        }
+        user_cat_avgs[uid] = {cat: sum(scores) / len(scores) for cat, scores in cat_map.items()}
 
     sample_size = len(user_avgs)
     all_avg_scores = sorted(user_avgs.values())
@@ -225,9 +221,7 @@ async def get_benchmark(
 
     # Current user's overall avg
     my_nodes = user_nodes.get(current_user.id, [])
-    my_avg = (
-        sum(n.current_score for n in my_nodes) / len(my_nodes) if my_nodes else 0.0
-    )
+    my_avg = sum(n.current_score for n in my_nodes) / len(my_nodes) if my_nodes else 0.0
 
     # Percentile = fraction of users scoring below the current user
     overall_pct = (
@@ -242,9 +236,7 @@ async def get_benchmark(
     my_cat_avgs = user_cat_avgs.get(current_user.id, {})
 
     for cat in all_categories:
-        cat_scores = sorted(
-            v[cat] for v in user_cat_avgs.values() if cat in v
-        )
+        cat_scores = sorted(v[cat] for v in user_cat_avgs.values() if cat in v)
         my_cat_score = my_cat_avgs.get(cat, 0.0)
         if cat_scores:
             pct = int(sum(1 for s in cat_scores if s < my_cat_score) / len(cat_scores) * 100)
