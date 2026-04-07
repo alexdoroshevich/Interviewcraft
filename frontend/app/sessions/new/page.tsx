@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, ApiError, JdAnalysisResponse } from "@/lib/api";
+import { api, ApiError, JdAnalysisResponse, CompanyIntelItem, CompanyIntelListResponse } from "@/lib/api";
 import { AppNav } from "@/components/AppNav";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -142,6 +142,14 @@ function NewSessionForm() {
   const [jdResult, setJdResult] = useState<JdAnalysisResponse | null>(null);
   const [jdError, setJdError] = useState<string | null>(null);
 
+  // Company Intel state
+  const [intelData, setIntelData] = useState<CompanyIntelListResponse | null>(null);
+  const [intelOpen, setIntelOpen] = useState(false);
+  const [intelLoading, setIntelLoading] = useState(false);
+  const [intelSubmitText, setIntelSubmitText] = useState("");
+  const [intelSubmitCategory, setIntelSubmitCategory] = useState("process");
+  const [intelSubmitting, setIntelSubmitting] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {
@@ -162,6 +170,41 @@ function NewSessionForm() {
   useEffect(() => {
     setDurationMinutes(DURATION_DEFAULTS[sessionType]);
   }, [sessionType]);
+
+  // Load company intel when a company is selected and the panel is opened
+  useEffect(() => {
+    if (!company || !intelOpen) return;
+    setIntelLoading(true);
+    api.companies.getIntel(company)
+      .then(setIntelData)
+      .catch(() => setIntelData(null))
+      .finally(() => setIntelLoading(false));
+  }, [company, intelOpen]);
+
+  async function submitIntel() {
+    if (!company || !intelSubmitText.trim()) return;
+    setIntelSubmitting(true);
+    try {
+      const item = await api.companies.submitIntel(company, intelSubmitCategory, intelSubmitText.trim());
+      setIntelData((prev) => prev
+        ? { ...prev, items: [item, ...prev.items], total: prev.total + 1 }
+        : { company, items: [item], total: 1 }
+      );
+      setIntelSubmitText("");
+    } catch { /* silent */ }
+    finally { setIntelSubmitting(false); }
+  }
+
+  async function upvoteIntel(item: CompanyIntelItem) {
+    if (!company) return;
+    try {
+      const res = await api.companies.upvote(company, item.id);
+      setIntelData((prev) => prev
+        ? { ...prev, items: prev.items.map((i) => i.id === item.id ? { ...i, upvotes: res.upvotes } : i) }
+        : prev
+      );
+    } catch { /* silent */ }
+  }
 
   async function startSession() {
     setLoading(true);
@@ -411,6 +454,84 @@ function NewSessionForm() {
               ))}
             </div>
           </section>
+
+          {/* Company Intel */}
+          {company && (
+            <section className="mb-6">
+              <button
+                onClick={() => setIntelOpen((v) => !v)}
+                className="flex items-center justify-between w-full text-left text-sm font-medium text-slate-700 mb-2"
+              >
+                <span>
+                  Community Intel — {COMPANIES.find((c) => c.value === company)?.label}
+                  {intelData && intelData.total > 0 && (
+                    <span className="ml-2 text-xs text-indigo-600 font-normal">{intelData.total} tip{intelData.total !== 1 ? "s" : ""}</span>
+                  )}
+                </span>
+                <span className="text-slate-400 text-xs">{intelOpen ? "▲" : "▼"}</span>
+              </button>
+
+              {intelOpen && (
+                <div className="space-y-3 border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800">
+                  {/* Existing intel */}
+                  {intelLoading ? (
+                    <p className="text-xs text-muted-foreground">Loading…</p>
+                  ) : intelData && intelData.items.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {intelData.items.map((item) => (
+                        <div key={item.id} className="flex gap-2 text-xs">
+                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 capitalize">
+                            {item.category}
+                          </span>
+                          <span className="flex-1 text-slate-700 dark:text-slate-300">{item.content}</span>
+                          <button
+                            onClick={() => upvoteIntel(item)}
+                            className="shrink-0 text-slate-400 hover:text-indigo-600 transition-colors"
+                            title="Upvote"
+                          >
+                            ▲ {item.upvotes}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No tips yet — be the first to share!</p>
+                  )}
+
+                  {/* Submit form */}
+                  <div className="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
+                    <div className="flex gap-2">
+                      <select
+                        value={intelSubmitCategory}
+                        onChange={(e) => setIntelSubmitCategory(e.target.value)}
+                        className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                      >
+                        <option value="process">Process</option>
+                        <option value="technical">Technical</option>
+                        <option value="culture">Culture</option>
+                        <option value="tips">Tips</option>
+                      </select>
+                      <textarea
+                        value={intelSubmitText}
+                        onChange={(e) => setIntelSubmitText(e.target.value)}
+                        placeholder="Share what you know about their interview process…"
+                        rows={2}
+                        maxLength={1000}
+                        className="flex-1 text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <button
+                      onClick={submitIntel}
+                      disabled={intelSubmitting || intelSubmitText.trim().length < 20}
+                      className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {intelSubmitting ? "Sharing…" : "Share Tip"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Interviewer Persona */}
           <section className="mb-6">

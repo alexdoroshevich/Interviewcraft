@@ -85,6 +85,9 @@ class DrillPlanResponse(BaseModel):
     estimated_minutes_per_week: int
     generated_at: str
     message: str | None
+    # Countdown fields (None when no interview date is set)
+    days_until_interview: int | None = None
+    interview_urgency: str | None = None  # "critical" | "high" | "normal" | "relaxed"
 
 
 class BeatYourBestItem(BaseModel):
@@ -96,6 +99,16 @@ class BeatYourBestItem(BaseModel):
     best_score: int
     gap: int
     can_beat: bool
+
+
+class BenchmarkResponse(BaseModel):
+    """Peer benchmark: where the current user ranks vs all users."""
+
+    overall_percentile: int  # 0-100 — better than X% of users
+    by_category: dict[str, int]  # category -> percentile
+    your_avg_score: float
+    platform_avg_score: float
+    sample_size: int  # total users in the benchmark pool
 
 
 # ── Rewind ────────────────────────────────────────────────────────────────────

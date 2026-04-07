@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { api, DashboardResponse, ApiError, UserResponse, ResumeProfile, ResumeProfileResponse } from "@/lib/api";
+import { api, DashboardResponse, ApiError, UserResponse, ResumeProfile, ResumeProfileResponse, InterviewDateResponse } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { AppNav } from "@/components/AppNav";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,6 +205,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasAssessment, setHasAssessment] = useState(true);
+  const [interviewDate, setInterviewDate] = useState<InterviewDateResponse | null>(null);
+  const [dateUpdating, setDateUpdating] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -212,15 +214,27 @@ export default function DashboardPage() {
       api.dashboard.get(),
       api.auth.me(),
       api.profile.getSelfAssessment().catch(() => ({ completed: false, data: null })),
+      api.profile.getInterviewDate().catch(() => null),
     ])
-      .then(([dashData, userData, saStatus]) => {
+      .then(([dashData, userData, saStatus, dateData]) => {
         setData(dashData);
         setUser(userData);
         setHasAssessment(saStatus.completed);
+        setInterviewDate(dateData);
       })
       .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load dashboard"))
       .finally(() => setLoading(false));
   }, [ready]);
+
+  async function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value || null;
+    setDateUpdating(true);
+    try {
+      const updated = await api.profile.setInterviewDate(val);
+      setInterviewDate(updated);
+    } catch { /* silent — date is non-critical */ }
+    finally { setDateUpdating(false); }
+  }
 
   if (loading) return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -250,6 +264,36 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Here&apos;s your practice overview</p>
         </div>
+
+        {/* Interview Countdown */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Target Interview Date</p>
+                {interviewDate?.days_until !== null && interviewDate?.days_until !== undefined ? (
+                  <p className="text-lg font-bold text-indigo-700 dark:text-indigo-400">
+                    {interviewDate.days_until === 0
+                      ? "Today!"
+                      : `${interviewDate.days_until} day${interviewDate.days_until === 1 ? "" : "s"} away`}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not set — add a date to get an urgency-aware drill plan</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {dateUpdating && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+                <input
+                  type="date"
+                  value={interviewDate?.interview_date ?? ""}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={handleDateChange}
+                  className="text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {!hasAssessment && (
           <Link

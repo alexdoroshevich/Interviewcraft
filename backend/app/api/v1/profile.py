@@ -5,11 +5,12 @@ under the 'self_assessment' key. This data feeds the drill planner
 to personalize practice recommendations.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -127,4 +128,78 @@ async def get_self_assessment(
             interview_timeline=sa["interview_timeline"],
             completed_at=sa["completed_at"],
         ),
+    )
+
+
+# ── PATCH /interview-date ─────────────────────────────────────────────────────
+
+
+class InterviewDateRequest(BaseModel):
+    """Body for PATCH /api/v1/profile/interview-date."""
+
+    interview_date: date | None  # ISO date string (YYYY-MM-DD), null to clear
+
+
+class InterviewDateResponse(BaseModel):
+    """Response after setting interview date."""
+
+    interview_date: date | None
+    days_until: int | None  # None if date is in the past or not set
+
+
+@router.patch("/interview-date", response_model=InterviewDateResponse)
+async def set_interview_date(
+    body: InterviewDateRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InterviewDateResponse:
+    """Set or clear the user's target interview date.
+
+    Stored in user.profile['interview_date'] as an ISO date string.
+    """
+    profile = dict(current_user.profile) if current_user.profile else {}
+
+    if body.interview_date is None:
+        profile.pop("interview_date", None)
+        current_user.profile = profile
+        await db.commit()
+        logger.info("profile.interview_date_cleared", user_id=str(current_user.id))
+        return InterviewDateResponse(interview_date=None, days_until=None)
+
+    profile["interview_date"] = body.interview_date.isoformat()
+    current_user.profile = profile
+    await db.commit()
+
+    today = datetime.now(tz=UTC).date()
+    days = (body.interview_date - today).days
+    days_until = days if days >= 0 else None
+
+    logger.info(
+        "profile.interview_date_set",
+        user_id=str(current_user.id),
+        days_until=days_until,
+    )
+    return InterviewDateResponse(
+        interview_date=body.interview_date,
+        days_until=days_until,
+    )
+
+
+@router.get("/interview-date", response_model=InterviewDateResponse)
+async def get_interview_date(
+    current_user: CurrentUser,
+) -> InterviewDateResponse:
+    """Return the user's saved interview date and days remaining."""
+    profile = current_user.profile or {}
+    raw = profile.get("interview_date")
+
+    if not raw:
+        return InterviewDateResponse(interview_date=None, days_until=None)
+
+    interview_date = date.fromisoformat(raw)
+    today = datetime.now(tz=UTC).date()
+    days = (interview_date - today).days
+    return InterviewDateResponse(
+        interview_date=interview_date,
+        days_until=days if days >= 0 else None,
     )
