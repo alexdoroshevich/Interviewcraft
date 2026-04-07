@@ -6,10 +6,9 @@ that gets appended to the system prompt below the cache boundary.
 
 from __future__ import annotations
 
-from typing import Any
-
 import random
 import uuid
+from typing import Any
 
 import structlog
 from sqlalchemy import func, select

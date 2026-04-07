@@ -8,9 +8,9 @@ GET  /api/v1/skills/best       — Beat Your Best data
 
 from __future__ import annotations
 
+import typing
 from collections import defaultdict
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import APIRouter, Depends

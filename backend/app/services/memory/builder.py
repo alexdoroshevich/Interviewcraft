@@ -612,9 +612,10 @@ async def search_stories_fts(
         select(Story)
         .where(
             Story.user_id == user_id,
-            sa_func.to_tsvector("english", sa_func.coalesce(Story.title, "") + " " + sa_func.coalesce(Story.summary, "")).op("@@")(
-                sa_func.plainto_tsquery("english", query)
-            ),
+            sa_func.to_tsvector(
+                "english",
+                sa_func.coalesce(Story.title, "") + " " + sa_func.coalesce(Story.summary, ""),
+            ).op("@@")(sa_func.plainto_tsquery("english", query)),
         )
         .order_by(Story.best_score_with_this_story.desc().nulls_last())
         .limit(limit)

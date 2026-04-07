@@ -13,9 +13,9 @@ Used for:
   - Open source portfolio demos
 """
 
+import typing
 from datetime import UTC, datetime
 from typing import Annotated, Literal
-import typing
 
 import structlog
 from fastapi import APIRouter, Depends, Query

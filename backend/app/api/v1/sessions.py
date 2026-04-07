@@ -12,10 +12,10 @@ WebSocket:
 
 from __future__ import annotations
 
+import typing
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status

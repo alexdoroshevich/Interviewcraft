@@ -14,10 +14,10 @@ Architecture:
 from __future__ import annotations
 
 import asyncio
+import typing
 import uuid
 from decimal import Decimal
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status

@@ -13,11 +13,10 @@ Data sources (priority order):
 
 from __future__ import annotations
 
-from typing import Any
-
 import re
 import uuid
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 from sqlalchemy import select

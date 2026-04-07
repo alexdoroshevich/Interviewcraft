@@ -7,9 +7,9 @@ Security:
 - 5 req/min per IP rate limit on all auth endpoints
 """
 
+import typing
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status

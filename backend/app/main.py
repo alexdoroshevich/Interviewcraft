@@ -1,9 +1,9 @@
 """InterviewCraft — FastAPI application entry point."""
 
+import typing
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import Depends, FastAPI
@@ -39,7 +39,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Application lifespan — startup and shutdown hooks."""
     logger.info("interviewcraft.startup", env=settings.app_env, debug=settings.debug)
     yield

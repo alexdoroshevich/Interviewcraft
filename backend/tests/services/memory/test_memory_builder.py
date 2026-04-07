@@ -101,8 +101,15 @@ def _make_db(
     #   4. select(SkillGraphNode)          → skill_result
     # For no-story calls only 1 and 4 fire, but we always provide the full list for safety.
     db.execute = AsyncMock(
-        side_effect=[mem_result, story_find_result, stories_rank_result, skill_result,
-                     story_find_result, stories_rank_result, skill_result]  # extra safety slots
+        side_effect=[
+            mem_result,
+            story_find_result,
+            stories_rank_result,
+            skill_result,
+            story_find_result,
+            stories_rank_result,
+            skill_result,
+        ]  # extra safety slots
     )
     db.add = MagicMock()
     db.flush = AsyncMock()

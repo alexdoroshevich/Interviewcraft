@@ -18,10 +18,10 @@ DoD KPIs tracked here:
   ✅ session completion rate > 60%
 """
 
+import typing
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Response, status

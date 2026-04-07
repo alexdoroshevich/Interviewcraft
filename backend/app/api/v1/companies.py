@@ -7,9 +7,9 @@ POST /api/v1/companies/{company}/intel/{id}/upvote — upvote a tip
 
 from __future__ import annotations
 
+import typing
 import uuid
 from typing import Annotated
-import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status

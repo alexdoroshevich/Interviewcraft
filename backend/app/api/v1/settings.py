@@ -14,8 +14,8 @@ They are NEVER returned in plaintext and NEVER logged.
 
 from __future__ import annotations
 
-from typing import Annotated
 import typing
+from typing import Annotated
 
 import httpx
 import structlog
@@ -275,9 +275,7 @@ async def delete_account(
     # Collect session IDs for child-table deletes that FK on session_id
     session_ids_result = await db.execute(
         InterviewSession.__table__.select()
-        .with_only_columns(
-            InterviewSession.id
-        )
+        .with_only_columns(InterviewSession.id)
         .where(InterviewSession.user_id == uid)
     )
     session_ids = [row[0] for row in session_ids_result]
