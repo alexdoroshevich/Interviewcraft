@@ -61,8 +61,19 @@ def _make_sync_execute_result(row_value: object) -> MagicMock:
     return result
 
 
-def _make_db(existing_memory_doc: dict | None = None) -> AsyncMock:
-    """Return a mock AsyncSession with an optional pre-existing UserMemory row."""
+def _make_db(
+    existing_memory_doc: dict | None = None,
+    existing_story: object | None = None,
+) -> AsyncMock:
+    """Return a mock AsyncSession with an optional pre-existing UserMemory row.
+
+    execute side_effect order (matches _merge_extraction call order):
+      1. user_memory row
+      2. skill_graph nodes (scalars().all())
+      3. story find-by-title (only when story_detected=True)
+      4. top-4 stories ranking (always — returns empty list when no stories)
+    We provide 6 slots so tests with or without story detection always succeed.
+    """
     from app.models.user_memory import UserMemory
 
     db = AsyncMock()
@@ -78,12 +89,23 @@ def _make_db(existing_memory_doc: dict | None = None) -> AsyncMock:
     else:
         mem = None
 
-    # First execute → user_memory row (sync result); second execute → skills (sync result)
     mem_result = _make_sync_execute_result(mem)
-    skill_result = _make_sync_execute_result(None)  # scalar not used; scalars().all() = []
+    skill_result = _make_sync_execute_result(None)  # scalars().all() = []
+    story_find_result = _make_sync_execute_result(existing_story)  # story upsert lookup
+    stories_rank_result = _make_sync_execute_result(None)  # scalars().all() = []
 
-    db.execute = AsyncMock(side_effect=[mem_result, skill_result])
+    # Execute call order in _merge_extraction:
+    #   1. select(UserMemory)              → mem_result
+    #   2. select(Story).where(title=...) → story_find_result  [only when story_detected=True]
+    #   3. select(Story).order_by(score)  → stories_rank_result [only when story_detected=True]
+    #   4. select(SkillGraphNode)          → skill_result
+    # For no-story calls only 1 and 4 fire, but we always provide the full list for safety.
+    db.execute = AsyncMock(
+        side_effect=[mem_result, story_find_result, stories_rank_result, skill_result,
+                     story_find_result, stories_rank_result, skill_result]  # extra safety slots
+    )
     db.add = MagicMock()
+    db.flush = AsyncMock()
     db.commit = AsyncMock()
     return db
 
@@ -188,9 +210,12 @@ async def test_merge_caps_mistakes_at_6() -> None:
 
 @pytest.mark.asyncio
 async def test_merge_adds_new_story() -> None:
+    from app.models.story import Story
+
     existing_doc = {"best_stories": [], "total_sessions": 1}
     user_id = uuid.uuid4()
-    db = _make_db(existing_doc)
+    # No existing Story row in DB → code will create one via db.add
+    db = _make_db(existing_doc, existing_story=None)
     session = _make_session()
     segments = [_make_segment(80)]
     extraction = {
@@ -207,7 +232,11 @@ async def test_merge_adds_new_story() -> None:
     }
 
     await _merge_extraction(db, user_id, session, segments, extraction)
-    db.add.assert_not_called()  # row existed, not added
+    # Memory row already existed (not added), but a new Story row should be added
+    assert db.add.call_count == 1
+    added = db.add.call_args[0][0]
+    assert isinstance(added, Story)
+    assert added.title == "Led migration project"
 
 
 @pytest.mark.asyncio
@@ -217,7 +246,11 @@ async def test_merge_updates_existing_story_score() -> None:
         "total_sessions": 2,
     }
     user_id = uuid.uuid4()
-    db = _make_db(existing_doc)
+    # Pre-existing Story row in DB — score should be updated in-place, no db.add
+    existing_story_mock = MagicMock()
+    existing_story_mock.best_score_with_this_story = 60
+    existing_story_mock.times_used = 2
+    db = _make_db(existing_doc, existing_story=existing_story_mock)
     session = _make_session()
     segments = [_make_segment(90)]
     extraction = {
@@ -234,7 +267,9 @@ async def test_merge_updates_existing_story_score() -> None:
     }
 
     await _merge_extraction(db, user_id, session, segments, extraction)
+    # Story existed in DB — no new row added; score should be updated in-place
     db.add.assert_not_called()
+    assert existing_story_mock.best_score_with_this_story == 90  # max(60, 90)
 
 
 # ── _merge_extraction: coaching insights ─────────────────────────────────────
