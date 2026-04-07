@@ -262,6 +262,14 @@ export interface BeatYourBestItem {
   can_beat: boolean;
 }
 
+export interface BenchmarkResponse {
+  overall_percentile: number;
+  by_category: Record<string, number>;
+  your_avg_score: number;
+  platform_avg_score: number;
+  sample_size: number;
+}
+
 export interface SkillHistoryPoint {
   date: string;
   score: number;
@@ -690,6 +698,7 @@ export const api = {
     getPlan: () => apiFetch<DrillPlanResponse>("/api/v1/skills/plan"),
     getHistory: () => apiFetch<SkillHistoryResponse[]>("/api/v1/skills/history"),
     getBest: () => apiFetch<BeatYourBestItem[]>("/api/v1/skills/best"),
+    getBenchmark: () => apiFetch<BenchmarkResponse>("/api/v1/skills/benchmark"),
   },
 
   questions: {

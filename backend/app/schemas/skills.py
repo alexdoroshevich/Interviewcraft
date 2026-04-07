@@ -98,6 +98,16 @@ class BeatYourBestItem(BaseModel):
     can_beat: bool
 
 
+class BenchmarkResponse(BaseModel):
+    """Peer benchmark: where the current user ranks vs all users."""
+
+    overall_percentile: int  # 0-100 — better than X% of users
+    by_category: dict[str, int]  # category -> percentile
+    your_avg_score: float
+    platform_avg_score: float
+    sample_size: int  # total users in the benchmark pool
+
+
 # ── Rewind ────────────────────────────────────────────────────────────────────
 
 

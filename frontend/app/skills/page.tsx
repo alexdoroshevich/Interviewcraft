@@ -8,6 +8,7 @@ import {
   SkillGraphResponse,
   DrillPlanResponse,
   BeatYourBestItem,
+  BenchmarkResponse,
   SkillHistoryResponse,
   SkillHistoryPoint,
   ApiError,
@@ -89,6 +90,101 @@ function DrillPlanSection({ plan }: { plan: DrillPlanResponse }) {
   );
 }
 
+// ── Benchmark section ─────────────────────────────────────────────────────────
+
+function BenchmarkSection({ bench }: { bench: BenchmarkResponse }) {
+  const CAT_LABELS: Record<string, string> = {
+    behavioral: "Behavioral",
+    system_design: "System Design",
+    communication: "Communication",
+    coding_discussion: "Coding",
+    negotiation: "Negotiation",
+  };
+
+  const pctColor = (p: number) =>
+    p >= 75 ? "bg-green-500" : p >= 50 ? "bg-indigo-500" : p >= 25 ? "bg-amber-500" : "bg-red-400";
+
+  const pctLabel = (p: number) =>
+    p >= 75 ? "Top 25%" : p >= 50 ? "Above Average" : p >= 25 ? "Below Average" : "Bottom 25%";
+
+  if (bench.sample_size < 2) {
+    return (
+      <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
+        <AlertTriangle className="size-4 text-amber-600" />
+        <AlertDescription className="text-amber-800 dark:text-amber-300">
+          Benchmark needs more users to be meaningful. Check back as the community grows.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Overall card */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Overall Rank</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">
+                Top {100 - bench.overall_percentile}%
+              </p>
+            </div>
+            <div className="text-right">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full text-white ${pctColor(bench.overall_percentile)}`}>
+                {pctLabel(bench.overall_percentile)}
+              </span>
+              <p className="text-xs text-muted-foreground mt-2">
+                {bench.sample_size} users · platform avg {bench.platform_avg_score}
+              </p>
+            </div>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+            <div
+              className={`h-2.5 rounded-full transition-all ${pctColor(bench.overall_percentile)}`}
+              style={{ width: `${bench.overall_percentile}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>0th</span>
+            <span>Your score: {bench.your_avg_score}</span>
+            <span>100th</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Per-category */}
+      {Object.entries(bench.by_category).length > 0 && (
+        <Card>
+          <CardContent className="py-4 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-l-2 border-indigo-500 pl-3">
+              By Category
+            </h3>
+            {Object.entries(bench.by_category)
+              .sort(([, a], [, b]) => b - a)
+              .map(([cat, pct]) => (
+                <div key={cat}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 capitalize">
+                      {CAT_LABELS[cat] ?? cat.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Top {100 - pct}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full ${pctColor(pct)}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SkillsPage() {
@@ -96,6 +192,7 @@ export default function SkillsPage() {
   const [graph, setGraph] = useState<SkillGraphResponse | null>(null);
   const [plan, setPlan] = useState<DrillPlanResponse | null>(null);
   const [best, setBest] = useState<BeatYourBestItem[]>([]);
+  const [bench, setBench] = useState<BenchmarkResponse | null>(null);
   const [historyMap, setHistoryMap] = useState<Record<string, SkillHistoryPoint[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,11 +222,13 @@ export default function SkillsPage() {
       api.skills.getPlan(),
       api.skills.getBest(),
       api.skills.getHistory(),
+      api.skills.getBenchmark(),
     ])
-      .then(([g, p, b, h]: [SkillGraphResponse, DrillPlanResponse, BeatYourBestItem[], SkillHistoryResponse[]]) => {
+      .then(([g, p, b, h, bk]: [SkillGraphResponse, DrillPlanResponse, BeatYourBestItem[], SkillHistoryResponse[], BenchmarkResponse]) => {
         setGraph(g);
         setPlan(p);
         setBest(b);
+        setBench(bk);
         const map: Record<string, SkillHistoryPoint[]> = {};
         for (const item of h) map[item.skill_name] = item.history;
         setHistoryMap(map);
@@ -223,6 +322,7 @@ export default function SkillsPage() {
             <TabsTrigger value="graph" className="flex-1">Skill Graph</TabsTrigger>
             <TabsTrigger value="plan" className="flex-1">Drill Plan</TabsTrigger>
             <TabsTrigger value="best" className="flex-1">Beat Your Best</TabsTrigger>
+            <TabsTrigger value="benchmark" className="flex-1">Benchmark</TabsTrigger>
           </TabsList>
 
           <TabsContent value="graph" className="space-y-6 animate-fade-in">
@@ -297,6 +397,22 @@ export default function SkillsPage() {
                 window.location.href = `/sessions/new?skill=${encodeURIComponent(skill)}`;
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="benchmark" className="space-y-4 animate-fade-in">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-l-2 border-indigo-500 pl-3">
+              Peer Benchmark
+            </h2>
+            {bench ? (
+              <BenchmarkSection bench={bench} />
+            ) : (
+              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
+                <AlertTriangle className="size-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                  Score a session first to see how you compare.
+                </AlertDescription>
+              </Alert>
+            )}
           </TabsContent>
         </Tabs>
       </div>
