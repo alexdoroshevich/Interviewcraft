@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { LevelBadge, type LevelAssessment } from "./LevelBadge";
 import { RewindPanel } from "./RewindPanel";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -52,6 +59,44 @@ export interface DiffVersion {
   text: string;
   changes: Array<{ before: string; after: string; rule: string; impact: string }>;
   estimated_new_score: number;
+}
+
+// ── Evidence source badge ─────────────────────────────────────────────────────
+
+const VERIFIED_TOOLTIP = "Quote confirmed from audio transcript";
+const ESTIMATED_TOOLTIP = "Timestamp span identified, quote approximated";
+
+function EvidenceSourceBadge({ rule }: { rule: RuleTriggered }) {
+  const isVerified =
+    rule.evidence.server_extracted_quote !== null && rule.confidence === "strong";
+
+  if (isVerified) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <Badge className="cursor-default bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700 text-[10px] px-1.5 py-0 h-4 font-medium">
+              verified
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>{VERIFIED_TOOLTIP}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <Badge className="cursor-default bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-700 text-[10px] px-1.5 py-0 h-4 font-medium">
+            estimated
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>{ESTIMATED_TOOLTIP}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 // ── Score ring ─────────────────────────────────────────────────────────────────
@@ -123,11 +168,16 @@ function RuleRow({ rule }: { rule: RuleTriggered }) {
 
       {open && (
         <div className="px-3 pb-3 space-y-2 border-t border-slate-100 pt-2">
-          {rule.evidence.server_extracted_quote && (
-            <blockquote className="text-xs text-slate-500 italic border-l-2 border-slate-200 pl-2">
-              &ldquo;{rule.evidence.server_extracted_quote}&rdquo;
-            </blockquote>
-          )}
+          <div className="flex items-start gap-2">
+            {rule.evidence.server_extracted_quote ? (
+              <blockquote className="flex-1 text-xs text-slate-500 italic border-l-2 border-slate-200 pl-2">
+                &ldquo;{rule.evidence.server_extracted_quote}&rdquo;
+              </blockquote>
+            ) : (
+              <div className="flex-1" />
+            )}
+            <EvidenceSourceBadge rule={rule} />
+          </div>
           <div className="flex gap-1.5 items-start">
             <span className="text-xs font-bold text-green-600 shrink-0 mt-0.5">Fix:</span>
             <p className="text-xs text-slate-600">{rule.fix}</p>
