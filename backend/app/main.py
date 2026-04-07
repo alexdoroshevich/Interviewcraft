@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.companies import router as companies_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.digest import router as digest_router
 from app.api.v1.negotiation import router as negotiation_router
@@ -81,6 +82,7 @@ app.include_router(resume_router)
 app.include_router(settings_router)
 app.include_router(digest_router)
 app.include_router(share_router)
+app.include_router(companies_router)
 
 
 @app.get("/health", tags=["ops"])

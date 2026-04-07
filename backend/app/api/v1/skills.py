@@ -96,7 +96,7 @@ async def get_drill_plan(
     days_until: int | None = None
     urgency: str | None = None
 
-    if raw_date:
+    if isinstance(raw_date, str):
         interview_date = date.fromisoformat(raw_date)
         today = datetime.now(tz=UTC).date()
         days = (interview_date - today).days

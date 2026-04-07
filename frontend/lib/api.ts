@@ -819,9 +819,40 @@ export const api = {
     getCard: (token: string) =>
       apiFetch<ShareCardPublicResponse>(`/api/v1/share/card/${token}`),
   },
+
+  companies: {
+    getIntel: (company: string) =>
+      apiFetch<CompanyIntelListResponse>(`/api/v1/companies/${encodeURIComponent(company)}/intel`),
+    submitIntel: (company: string, category: string, content: string) =>
+      apiFetch<CompanyIntelItem>(`/api/v1/companies/${encodeURIComponent(company)}/intel`, {
+        method: "POST",
+        body: JSON.stringify({ category, content }),
+      }),
+    upvote: (company: string, intelId: string) =>
+      apiFetch<{ upvotes: number }>(`/api/v1/companies/${encodeURIComponent(company)}/intel/${intelId}/upvote`, {
+        method: "POST",
+      }),
+  },
 };
 
 export { ApiError };
+
+// ── Company Intel ──────────────────────────────────────────────────────────────
+
+export interface CompanyIntelItem {
+  id: string;
+  company: string;
+  category: string;
+  content: string;
+  upvotes: number;
+  created_at: string;
+}
+
+export interface CompanyIntelListResponse {
+  company: string;
+  items: CompanyIntelItem[];
+  total: number;
+}
 
 // ── Share card ─────────────────────────────────────────────────────────────────
 
