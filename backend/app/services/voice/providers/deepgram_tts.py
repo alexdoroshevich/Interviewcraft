@@ -36,7 +36,7 @@ class DeepgramTTSProvider(TTSProvider):
         self._model = model
         self._last_metrics: TTSMetrics | None = None
 
-    async def synthesize_stream(  # type: ignore[override]
+    async def synthesize_stream(
         self,
         text: str,
     ) -> AsyncGenerator[bytes]:

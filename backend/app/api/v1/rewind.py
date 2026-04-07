@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Annotated
+import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -273,7 +274,7 @@ async def _get_segment(
     return seg
 
 
-def _build_rewind_hint(rules_triggered: list[dict]) -> str:
+def _build_rewind_hint(rules_triggered: list[dict[str, typing.Any]]) -> str:
     """Build a concise hint about what to fix in the rewind answer."""
     if not rules_triggered:
         return (

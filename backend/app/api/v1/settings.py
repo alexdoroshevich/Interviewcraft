@@ -15,6 +15,7 @@ They are NEVER returned in plaintext and NEVER logged.
 from __future__ import annotations
 
 from typing import Annotated
+import typing
 
 import httpx
 import structlog
@@ -52,9 +53,10 @@ _DEFAULT_QUALITY_PROFILE = "balanced"
 _SETTINGS_KEY = "app_settings"  # key inside user.profile JSONB
 
 
-def _get_profile_settings(user_profile: dict | None) -> dict:
+def _get_profile_settings(user_profile: dict[str, typing.Any] | None) -> dict[str, typing.Any]:
     """Extract the settings sub-dict from user.profile JSONB."""
-    return (user_profile or {}).get(_SETTINGS_KEY, {})
+    result = (user_profile or {}).get(_SETTINGS_KEY, {})
+    return result if isinstance(result, dict) else {}
 
 
 # ── GET /api/v1/settings ──────────────────────────────────────────────────────
@@ -273,7 +275,7 @@ async def delete_account(
     # Collect session IDs for child-table deletes that FK on session_id
     session_ids_result = await db.execute(
         InterviewSession.__table__.select()
-        .with_only_columns(  # type: ignore[attr-defined]
+        .with_only_columns(
             InterviewSession.id
         )
         .where(InterviewSession.user_id == uid)

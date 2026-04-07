@@ -39,7 +39,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         self._voice_id = voice_id
         self._last_metrics: TTSMetrics | None = None
 
-    async def synthesize_stream(  # type: ignore[override]
+    async def synthesize_stream(
         self,
         text: str,
     ) -> AsyncGenerator[bytes]:

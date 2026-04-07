@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from typing import Annotated
+import typing
 
 import structlog
 from fastapi import APIRouter, Depends
@@ -198,17 +199,17 @@ async def get_benchmark(
         )
 
     # Group nodes by user
-    user_nodes: dict = defaultdict(list)
+    user_nodes: dict[typing.Any, list[SkillGraphNode]] = defaultdict(list)
     for node in all_nodes:
         user_nodes[node.user_id].append(node)
 
     # Per-user overall avg score
-    user_avgs: dict = {
+    user_avgs: dict[typing.Any, float] = {
         uid: sum(n.current_score for n in nodes) / len(nodes) for uid, nodes in user_nodes.items()
     }
 
     # Per-user per-category avg
-    user_cat_avgs: dict = {}
+    user_cat_avgs: dict[typing.Any, dict[str, typing.Any]] = {}
     for uid, nodes in user_nodes.items():
         cat_map: dict[str, list[int]] = defaultdict(list)
         for n in nodes:

@@ -13,6 +13,8 @@ Data sources (priority order):
 
 from __future__ import annotations
 
+from typing import Any
+
 import re
 import uuid
 from dataclasses import dataclass
@@ -77,7 +79,7 @@ class DeliveryAnalysis:
     top_filler: str | None  # most frequent filler category
 
     # Hesitation gaps
-    hesitation_gaps: list[dict]  # serialisable form of HesitationGap
+    hesitation_gaps: list[dict[str, Any]]  # serialisable form of HesitationGap
     long_pause_count: int  # gaps ≥ 3 s
     has_word_timestamps: bool  # False when falling back to turn-level analysis
 
@@ -92,7 +94,7 @@ class DeliveryAnalysis:
 
 async def analyze_delivery(
     session_id: uuid.UUID,
-    transcript: list[dict],
+    transcript: list[dict[str, Any]],
     db: AsyncSession,
 ) -> DeliveryAnalysis:
     """Compute delivery metrics for a session.
@@ -172,7 +174,7 @@ def _analyze_from_word_timestamps(words: list[TranscriptWord]) -> DeliveryAnalys
 # ── Turn-level fallback path ───────────────────────────────────────────────────
 
 
-def _analyze_from_turns(transcript: list[dict]) -> DeliveryAnalysis:
+def _analyze_from_turns(transcript: list[dict[str, Any]]) -> DeliveryAnalysis:
     """Fallback analysis using only transcript turn text + timestamps."""
     user_turns = [t for t in transcript if t.get("role") == "user" and t.get("content")]
     if not user_turns:

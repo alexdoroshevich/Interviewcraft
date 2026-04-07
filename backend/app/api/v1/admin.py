@@ -21,6 +21,7 @@ DoD KPIs tracked here:
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
+import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -272,7 +273,7 @@ async def trigger_memory_consolidation(
     user_id: uuid.UUID,
     _admin: CurrentAdmin,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Manually trigger Batch API memory consolidation for a user."""
     from app.config import settings as cfg
     from app.models.user_memory import UserMemory

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Annotated
+import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -170,7 +171,7 @@ async def upvote_intel(
     intel_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, typing.Any]:
     """Increment the upvote count on an intel item."""
     result = await db.execute(
         select(CompanyIntel).where(

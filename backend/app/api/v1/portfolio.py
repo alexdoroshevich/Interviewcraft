@@ -15,6 +15,7 @@ Used for:
 
 from datetime import UTC, datetime
 from typing import Annotated, Literal
+import typing
 
 import structlog
 from fastapi import APIRouter, Depends, Query
@@ -38,7 +39,7 @@ async def export_portfolio(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     visibility: Literal["private", "public"] = Query(default="public"),
-) -> dict:
+) -> dict[str, typing.Any]:
     """Export training portfolio as JSON.
 
     public  — safe to share: skill graph, score trends, session counts, deltas.
