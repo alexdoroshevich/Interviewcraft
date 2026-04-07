@@ -7,7 +7,7 @@ import structlog
 
 # Patterns that match provider API keys — redacted from all log output
 _SECRET_PATTERNS = re.compile(
-    r"(sk-ant-[a-zA-Z0-9\-_]+|dg_[a-zA-Z0-9\-_]+|el_[a-zA-Z0-9\-_]+)",
+    r"(sk-ant-[a-zA-Z0-9\-_]+|sk-proj-[a-zA-Z0-9\-_]+|sk-[a-zA-Z0-9]{20,}|dg_[a-zA-Z0-9\-_]+|el_[a-zA-Z0-9\-_]+)",
     re.IGNORECASE,
 )
 
@@ -17,7 +17,7 @@ def scrub_secrets(
     method: str,
     event_dict: structlog.types.EventDict,
 ) -> structlog.types.EventDict:
-    """Redact Anthropic (sk-ant-*), Deepgram (dg_*), and ElevenLabs (el_*) keys."""
+    """Redact Anthropic (sk-ant-*), OpenAI (sk-proj-*), Deepgram (dg_*), and ElevenLabs (el_*) keys."""
     for key, value in event_dict.items():
         if isinstance(value, str):
             event_dict[key] = _SECRET_PATTERNS.sub("[REDACTED]", value)
