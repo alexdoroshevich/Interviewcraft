@@ -87,8 +87,31 @@ async def get_drill_plan(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DrillPlanResponse:
-    """Return the adaptive weekly drill plan."""
-    plan = await drill_planner.generate_weekly_plan(db, current_user.id)
+    """Return the adaptive weekly drill plan, countdown-aware if interview date is set."""
+    from datetime import UTC, date, datetime
+
+    # Read interview date from profile
+    profile = current_user.profile or {}
+    raw_date = profile.get("interview_date")
+    days_until: int | None = None
+    urgency: str | None = None
+
+    if raw_date:
+        interview_date = date.fromisoformat(raw_date)
+        today = datetime.now(tz=UTC).date()
+        days = (interview_date - today).days
+        if days >= 0:
+            days_until = days
+            if days <= 7:
+                urgency = "critical"
+            elif days <= 21:
+                urgency = "high"
+            elif days <= 60:
+                urgency = "normal"
+            else:
+                urgency = "relaxed"
+
+    plan = await drill_planner.generate_weekly_plan(db, current_user.id, days_until=days_until)
 
     return DrillPlanResponse(
         slots=[DrillSlot(**s) for s in plan["slots"]],
@@ -97,6 +120,8 @@ async def get_drill_plan(
         estimated_minutes_per_week=plan["estimated_minutes_per_week"],
         generated_at=plan["generated_at"],
         message=plan.get("message"),
+        days_until_interview=days_until,
+        interview_urgency=urgency,
     )
 
 

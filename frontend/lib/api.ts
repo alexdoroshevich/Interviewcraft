@@ -251,6 +251,8 @@ export interface DrillPlanResponse {
   estimated_minutes_per_week: number;
   generated_at: string;
   message: string | null;
+  days_until_interview: number | null;
+  interview_urgency: string | null;
 }
 
 export interface BeatYourBestItem {
@@ -516,6 +518,11 @@ export interface SelfAssessmentStatus {
   data: SelfAssessmentResponse | null;
 }
 
+export interface InterviewDateResponse {
+  interview_date: string | null;  // ISO date YYYY-MM-DD
+  days_until: number | null;
+}
+
 // ── Resume / Profile types ─────────────────────────────────────────────────
 
 export interface ProjectItem {
@@ -760,6 +767,13 @@ export const api = {
       apiFetch<SelfAssessmentResponse>("/api/v1/profile/self-assessment", {
         method: "POST",
         body: JSON.stringify(data),
+      }),
+    getInterviewDate: () =>
+      apiFetch<InterviewDateResponse>("/api/v1/profile/interview-date"),
+    setInterviewDate: (date: string | null) =>
+      apiFetch<InterviewDateResponse>("/api/v1/profile/interview-date", {
+        method: "PATCH",
+        body: JSON.stringify({ interview_date: date }),
       }),
   },
 

@@ -85,6 +85,9 @@ class DrillPlanResponse(BaseModel):
     estimated_minutes_per_week: int
     generated_at: str
     message: str | None
+    # Countdown fields (None when no interview date is set)
+    days_until_interview: int | None = None
+    interview_urgency: str | None = None  # "critical" | "high" | "normal" | "relaxed"
 
 
 class BeatYourBestItem(BaseModel):

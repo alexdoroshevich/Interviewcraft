@@ -384,6 +384,29 @@ export default function SkillsPage() {
                 </p>
               )}
             </div>
+            {plan?.days_until_interview !== null && plan?.days_until_interview !== undefined && (
+              <div className={`rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 ${
+                plan.interview_urgency === "critical"
+                  ? "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800"
+                  : plan.interview_urgency === "high"
+                  ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800"
+                  : "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800"
+              }`}>
+                <span className="text-lg">
+                  {plan.interview_urgency === "critical" ? "🚨" : plan.interview_urgency === "high" ? "⚡" : "📅"}
+                </span>
+                <span>
+                  {plan.days_until_interview === 0
+                    ? "Interview is today! Give it your best."
+                    : `${plan.days_until_interview} day${plan.days_until_interview === 1 ? "" : "s"} until your interview`}
+                  {plan.interview_urgency === "critical" && " — daily practice mode activated"}
+                  {plan.interview_urgency === "high" && " — 5-day intensive plan activated"}
+                </span>
+                <a href="/dashboard" className="ml-auto text-xs underline opacity-70 hover:opacity-100 shrink-0">
+                  Change date
+                </a>
+              </div>
+            )}
             {plan && <DrillPlanSection plan={plan} />}
           </TabsContent>
 

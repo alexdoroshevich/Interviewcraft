@@ -92,11 +92,16 @@ class DrillPlanner:
         self,
         db: AsyncSession,
         user_id: uuid.UUID,
+        days_until: int | None = None,
     ) -> dict[str, Any]:
-        """Return a weekly drill plan.
+        """Return a weekly drill plan, optionally countdown-aware.
+
+        Args:
+            days_until: days until the interview. When set, slot count and
+                        question volume scale with urgency.
 
         Returns a dict with:
-          - slots: list of drill slot dicts (Mon/Wed/Fri)
+          - slots: list of drill slot dicts
           - total_skills: int
           - weakest_skill: str | None
           - estimated_minutes_per_week: int
@@ -120,17 +125,30 @@ class DrillPlanner:
         # Sort by urgency (highest first)
         ranked = sorted(nodes, key=_urgency_score, reverse=True)
 
-        # Build 3 weekly slots (Mon, Wed, Fri)
-        days = ["Monday", "Wednesday", "Friday"]
+        # Scale slot count and questions-per-slot based on days until interview
+        if days_until is not None and days_until <= 7:
+            # Critical — daily drilling, double questions
+            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            max_slots = min(7, len(ranked))
+            base_questions = 3
+        elif days_until is not None and days_until <= 21:
+            # High urgency — 5 sessions/week
+            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+            max_slots = min(5, len(ranked))
+            base_questions = 2
+        else:
+            # Normal — Mon/Wed/Fri
+            day_names = ["Monday", "Wednesday", "Friday"]
+            max_slots = min(3, len(ranked))
+            base_questions = 1
+
         slots = []
-        for i, day in enumerate(days):
-            if i >= len(ranked):
-                break
+        for i in range(max_slots):
             node = ranked[i]
-            questions = 2 if node.current_score < 60 else 1
+            questions = base_questions + (1 if node.current_score < 60 else 0)
             slots.append(
                 _make_drill_slot(
-                    day=day,
+                    day=day_names[i],
                     skill_name=node.skill_name,
                     skill_category=node.skill_category,
                     current_score=node.current_score,
