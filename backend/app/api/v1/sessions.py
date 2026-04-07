@@ -21,6 +21,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import Response as PDFResponse
 from jose import JWTError
+from pydantic import BaseModel as _BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -433,12 +434,22 @@ async def delete_session(
 # ── GET /sessions/{id}/metrics ─────────────────────────────────────────────────
 
 
-@router.get("/{session_id}/metrics")
+class SessionMetricsResponse(_BaseModel):
+    turns: int
+    e2e_p50_ms: int | None
+    e2e_p95_ms: int | None
+    e2e_avg_ms: int | None
+    stt_avg_ms: int | None
+    llm_avg_ms: int | None
+    tts_avg_ms: int | None
+
+
+@router.get("/{session_id}/metrics", response_model=SessionMetricsResponse)
 async def get_session_metrics(
     session_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict[str, typing.Any]:
+) -> SessionMetricsResponse:
     """Return aggregated latency metrics for a session (STT/LLM/TTS/E2E p50/p95)."""
     await _get_owned_session(db, session_id, current_user.id)
 
@@ -461,15 +472,15 @@ async def get_session_metrics(
     llm = [r.llm_ttft_ms for r in rows if r.llm_ttft_ms is not None]
     tts = [r.tts_latency_ms for r in rows if r.tts_latency_ms is not None]
 
-    return {
-        "turns": len(rows),
-        "e2e_p50_ms": _pct(e2e, 50),
-        "e2e_p95_ms": _pct(e2e, 95),
-        "e2e_avg_ms": _avg(e2e),
-        "stt_avg_ms": _avg(stt),
-        "llm_avg_ms": _avg(llm),
-        "tts_avg_ms": _avg(tts),
-    }
+    return SessionMetricsResponse(
+        turns=len(rows),
+        e2e_p50_ms=_pct(e2e, 50),
+        e2e_p95_ms=_pct(e2e, 95),
+        e2e_avg_ms=_avg(e2e),
+        stt_avg_ms=_avg(stt),
+        llm_avg_ms=_avg(llm),
+        tts_avg_ms=_avg(tts),
+    )
 
 
 # -- GET /sessions/{id}/report
@@ -487,6 +498,11 @@ async def get_session_report(
     """
     from app.services.report.generator import download_report_pdf, generate_session_pdf
 
+    if not settings.anthropic_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Report generation unavailable.",
+        )
     try:
         file_id = await generate_session_pdf(
             session_id=session_id,
@@ -496,6 +512,12 @@ async def get_session_report(
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except Exception as exc:
+        logger.error("sessions.report_failed", session_id=str(session_id), error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Report generation failed — please try again.",
+        )
 
     pdf_bytes = await download_report_pdf(file_id, settings.anthropic_api_key)
     return PDFResponse(

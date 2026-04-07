@@ -7,7 +7,6 @@ POST /api/v1/companies/{company}/intel/{id}/upvote — upvote a tip
 
 from __future__ import annotations
 
-import typing
 import uuid
 from typing import Annotated
 
@@ -165,13 +164,21 @@ async def submit_company_intel(
 # ── POST /{company}/intel/{id}/upvote ─────────────────────────────────────────
 
 
-@router.post("/{company}/intel/{intel_id}/upvote", status_code=status.HTTP_200_OK)
+class _UpvoteResponse(BaseModel):
+    upvotes: int
+
+
+@router.post(
+    "/{company}/intel/{intel_id}/upvote",
+    status_code=status.HTTP_200_OK,
+    response_model=_UpvoteResponse,
+)
 async def upvote_intel(
     company: str,
     intel_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict[str, typing.Any]:
+) -> _UpvoteResponse:
     """Increment the upvote count on an intel item."""
     result = await db.execute(
         select(CompanyIntel).where(
@@ -193,4 +200,4 @@ async def upvote_intel(
         intel_id=str(intel_id),
         new_count=intel.upvotes,
     )
-    return {"upvotes": intel.upvotes}
+    return _UpvoteResponse(upvotes=intel.upvotes)

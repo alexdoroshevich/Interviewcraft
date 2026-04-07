@@ -498,7 +498,7 @@ class VoicePipeline:  # pragma: no cover
                     if accumulated_text.strip():
                         logger.debug(
                             "pipeline.skipped_short_fragment",
-                            text=accumulated_text,
+                            text_len=len(accumulated_text),
                             words=word_count,
                         )
                         self._carryover_text = accumulated_text
@@ -780,7 +780,7 @@ class VoicePipeline:  # pragma: no cover
                 full_response.strip().startswith("[WAIT]")
                 and self._wait_count < tuning.PIPELINE_MAX_WAIT_COUNT
             ):
-                logger.info("pipeline.llm_wait_signal", text=full_response[:40])
+                logger.info("pipeline.llm_wait_signal", response_len=len(full_response))
                 await tts_queue.put(None)
                 await tts_task
                 self._interrupted.clear()
@@ -955,7 +955,6 @@ class VoicePipeline:  # pragma: no cover
         The <candidate_answer> delimiters used in LLM context are stripped here
         so the stored transcript is clean for frontend display and scoring.
         """
-        int((time.monotonic() - self._session_start) * 1000)
         self._session.transcript = [
             {
                 "role": msg["role"],
@@ -1104,9 +1103,15 @@ class VoicePipeline:  # pragma: no cover
         """Mark session completed, save final transcript, commit all pending writes."""
         from app.models.interview_session import SessionStatus
 
-        # Final transcript sync
+        # Final transcript sync — strip <candidate_answer> delimiters (same as _save_transcript_turn)
         self._session.transcript = [
-            {"role": msg["role"], "content": msg["content"], "ts_ms": idx * 1000}
+            {
+                "role": msg["role"],
+                "content": msg["content"]
+                .replace("<candidate_answer>", "")
+                .replace("</candidate_answer>", ""),
+                "ts_ms": idx * 1000,
+            }
             for idx, msg in enumerate(self._conversation)
         ]
         self._session.status = SessionStatus.COMPLETED

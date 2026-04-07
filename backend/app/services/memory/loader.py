@@ -123,10 +123,9 @@ def _cache_miss(redis: object | None, cache_key: str) -> None:
             logger.warning("memory.cache_miss_redis_error", cache_key=cache_key, error=str(exc))
 
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.ensure_future(_set())
-    except Exception as exc:
+        loop = asyncio.get_running_loop()
+        asyncio.ensure_future(_set(), loop=loop)
+    except RuntimeError as exc:
         logger.warning("memory.cache_miss_event_loop_error", cache_key=cache_key, error=str(exc))
 
 

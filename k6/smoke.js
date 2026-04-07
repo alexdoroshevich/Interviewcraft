@@ -3,7 +3,7 @@
  * Verifies all critical endpoints respond before running load tests.
  *
  * Usage:
- *   k6 run --env BASE_URL=http://localhost:8080 k6/smoke.js
+ *   k6 run --env BASE_URL=http://localhost:8080 --env K6_USER=... --env K6_PASS=... k6/smoke.js
  */
 
 import http from "k6/http";
@@ -20,7 +20,9 @@ export const options = {
 };
 
 export function setup() {
-  const token = acquireToken("k6smoke@test.local", "K6SmokePw!1");
+  const user = __ENV.K6_USER || "k6smoke@test.local";
+  const pass = __ENV.K6_PASS || "K6SmokePw!1";
+  const token = acquireToken(user, pass);
   return { token };
 }
 
