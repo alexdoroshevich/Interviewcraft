@@ -559,7 +559,7 @@ async def apply_consolidation_batch(
 
     estimated_tokens = len(json.dumps(consolidated_doc)) // 4
     memory.memory_document = consolidated_doc
-    memory.version = memory.version + 1
+    memory.version = (memory.version or 0) + 1
     memory.token_count = estimated_tokens
     memory.sessions_since_consolidation = 0
     memory.last_consolidated_at = datetime.now(tz=UTC)
