@@ -66,8 +66,8 @@ async def create_session(
     """Create a new interview session.
 
     Business model (open-source portfolio project):
-      - First 2 sessions are free — the platform covers all AI costs.
-      - From session 3 onwards the user must supply their own Anthropic key.
+      - First session is free — the platform covers all AI costs.
+      - From session 2 onwards the user must supply their own Anthropic key.
         Deepgram (STT) and ElevenLabs (TTS) remain covered by the platform.
       - Gate is skipped when the platform itself has ANTHROPIC_API_KEY set
         (e.g. in development or on the host's own Fly.io deployment), so the
@@ -88,9 +88,9 @@ async def create_session(
         logger.info("sessions.first_session_forced_diagnostic", user_id=str(current_user.id))
         session_type = "diagnostic"
 
-    # From session 3 onwards, require user's own Anthropic key —
+    # From session 2 onwards, require user's own Anthropic key —
     # unless the platform already has a key configured (dev / hosted mode).
-    free_session_limit = 2
+    free_session_limit = 1
     if session_count >= free_session_limit:
         byok = current_user.byok_keys or {}
         has_user_key = "anthropic" in byok
@@ -104,7 +104,7 @@ async def create_session(
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail=(
-                    "Your 2 free sessions have been used. "
+                    "Your free session has been used. "
                     "Add your Anthropic API key in Settings to continue — "
                     "get one free at console.anthropic.com. "
                     "Deepgram and ElevenLabs are still covered by the platform."

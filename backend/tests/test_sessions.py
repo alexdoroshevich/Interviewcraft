@@ -137,8 +137,8 @@ async def test_create_session_behavioral(authed_client, mock_redis) -> None:
     user = _make_user()
     session = _make_session(user.id, type_="behavioral")
 
-    # execute() called once: COUNT query → 1 existing session (not first time, under limit)
-    db = _mock_db(execute_side_effects=[_count(1)])
+    # execute() called once: COUNT query → 0 existing sessions (first session, under limit=1)
+    db = _mock_db(execute_side_effects=[_count(0)])
 
     # After refresh, set the type so model_validate works
     async def _refresh(s):
@@ -354,14 +354,14 @@ async def test_end_session_invalid_status(authed_client) -> None:
 
 @pytest.mark.asyncio
 async def test_create_session_byok_required_returns_402(authed_client) -> None:
-    """3rd+ session with no BYOK and no platform key → 402."""
+    """2nd+ session with no BYOK and no platform key → 402."""
     from unittest.mock import patch
 
     user = _make_user()
     user.byok_keys = None  # no BYOK keys
 
-    # COUNT returns 2 so session_count >= free_session_limit
-    db = _mock_db(execute_side_effects=[_count(2)])
+    # COUNT returns 1 so session_count >= free_session_limit (1)
+    db = _mock_db(execute_side_effects=[_count(1)])
 
     with patch("app.api.v1.sessions.settings.anthropic_api_key", ""):
         async with authed_client(db, user) as (client, _):
@@ -371,4 +371,4 @@ async def test_create_session_byok_required_returns_402(authed_client) -> None:
             )
 
     assert response.status_code == 402
-    assert "free sessions" in response.json()["detail"].lower()
+    assert "free session" in response.json()["detail"].lower()

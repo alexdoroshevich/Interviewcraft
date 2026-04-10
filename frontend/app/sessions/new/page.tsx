@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError, JdAnalysisResponse, CompanyIntelItem, CompanyIntelListResponse } from "@/lib/api";
 import { AppNav } from "@/components/AppNav";
@@ -96,6 +97,43 @@ const DEEPGRAM_VOICES = [
   { id: "aura-arcas-en", name: "Arcas", desc: "Male, clear, professional" },
 ];
 
+function FreeSessionBanner({
+  sessionCount,
+  hasAnthropicKey,
+}: {
+  sessionCount: number | null;
+  hasAnthropicKey: boolean | null;
+}) {
+  // Still loading -- show nothing to avoid flicker
+  if (sessionCount === null || hasAnthropicKey === null) return null;
+  // User has their own key -- no need to show anything
+  if (hasAnthropicKey) return null;
+
+  if (sessionCount === 0) {
+    return (
+      <div className="mb-5 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
+        <span className="font-medium">1 free session included.</span>{" "}
+        After that, add your own key in{" "}
+        <Link href="/settings" className="underline underline-offset-2 hover:text-indigo-900 dark:hover:text-indigo-100">
+          Settings
+        </Link>{" "}
+        to continue. STT and TTS remain covered by the platform.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+      <span className="font-medium">Free session used.</span>{" "}
+      Add your LLM key in{" "}
+      <Link href="/settings" className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100">
+        Settings
+      </Link>{" "}
+      to start more sessions. STT and TTS remain covered by the platform.
+    </div>
+  );
+}
+
 function LoadingSpinner() {
   return (
     <svg
@@ -150,11 +188,26 @@ function NewSessionForm() {
   const [intelSubmitCategory, setIntelSubmitCategory] = useState("process");
   const [intelSubmitting, setIntelSubmitting] = useState(false);
 
+  // Free-session gating state
+  const [sessionCount, setSessionCount] = useState<number | null>(null);
+  const [hasAnthropicKey, setHasAnthropicKey] = useState<boolean | null>(null);
+
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       router.push("/login");
+      return;
     }
+    // Fetch current session count + BYOK state to drive the free-session banner.
+    // Both calls are independent and degrade gracefully on error.
+    api.sessions
+      .list(100)
+      .then((list) => setSessionCount(list.length))
+      .catch(() => setSessionCount(null));
+    api.settings
+      .get()
+      .then((s) => setHasAnthropicKey(s.byok_providers.includes("anthropic")))
+      .catch(() => setHasAnthropicKey(null));
   }, [router]);
 
   // Reset voice to appropriate default when switching between budget and non-budget profiles
@@ -266,8 +319,8 @@ function NewSessionForm() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
       <AppNav showBack />
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-3.5rem)]">
-        <div className="card w-full max-w-lg p-5 sm:p-8 animate-fade-in">
+      <div className="flex items-start justify-center p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-3.5rem)]">
+        <div className="card w-full max-w-lg xl:max-w-2xl p-5 sm:p-8 animate-fade-in">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">New Session</h1>
           {focusSkill ? (
             <div className="flex items-center gap-2 mb-4 mt-1">
@@ -278,10 +331,12 @@ function NewSessionForm() {
               <span className="text-xs text-slate-400">Questions will focus on this skill</span>
             </div>
           ) : (
-            <p className="text-slate-500 text-sm mb-8">
+            <p className="text-slate-500 text-sm mb-5">
               Choose your interview type and quality profile.
             </p>
           )}
+
+          <FreeSessionBanner sessionCount={sessionCount} hasAnthropicKey={hasAnthropicKey} />
 
           {/* JD Analyzer */}
           <section className="mb-5">

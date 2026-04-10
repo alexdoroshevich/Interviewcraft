@@ -1,3 +1,9 @@
+# Internal documents -- never publish
+docs/research/internal/
+docs/research/business-strategy-deep-analysis.md
+docs/research/career-fit-assessment.md
+docs/research/honest-assessment-april2026.md
+
 # Secrets — NEVER commit real keys
 .env
 *.env.local
