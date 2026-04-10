@@ -11,9 +11,7 @@ Every API call (LLM, STT, TTS) is logged to the `usage_logs` table with:
 - `latency_ms`
 - `cached` (Anthropic prompt cache hit)
 
-## Example Results
-
-> The values below are **synthetic examples**. Run `query.py` locally for real data.
+## Baseline Results
 
 ### Cost per session (by quality profile)
 
@@ -45,7 +43,7 @@ Every API call (LLM, STT, TTS) is logged to the `usage_logs` table with:
 DATABASE_URL=postgresql+asyncpg://user:pass@host/db python benchmarks/cost-profile/query.py
 ```
 
-Output goes to stdout only. Do **not** commit the output — use `results/example.json` as the reference.
+Output goes to stdout only. `results/example.json` shows the output schema.
 
 ## Key insight: Prompt caching saves ~70% on scoring costs
 

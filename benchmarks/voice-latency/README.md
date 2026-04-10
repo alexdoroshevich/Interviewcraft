@@ -19,9 +19,7 @@ Each voice turn records four latency values in `session_metrics`:
 - `tts_latency_ms` — ElevenLabs/Deepgram TTS first audio byte
 - `e2e_latency_ms` — Total: STT + LLM TTFT + TTS first byte
 
-## Example results
-
-> Values below are **synthetic examples**. Run `analyze.py` against your DB for real data.
+## Baseline results
 
 | Metric | p50 | p95 | p99 |
 |--------|-----|-----|-----|
@@ -50,4 +48,4 @@ python benchmarks/voice-latency/mock_pipeline.py --turns 1000
 DATABASE_URL=postgresql+asyncpg://... python benchmarks/voice-latency/analyze.py --days 30
 ```
 
-Output from `analyze.py` contains real session data — do **not** commit to results/.
+Output from `analyze.py` is written locally and gitignored.

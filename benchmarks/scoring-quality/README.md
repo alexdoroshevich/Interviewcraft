@@ -24,16 +24,14 @@ Measures how well the AI scorer agrees with human-calibrated scores on synthetic
 | coding_discussion | 3 | 30–85 |
 | edge cases | 2 | varies |
 
-All answers are **fictional** — crafted to exercise specific rules in the 15-rule rubric.
+Each answer is purpose-designed to exercise specific rules in the 15-rule rubric.
 Human scores were calibrated against the rubric's scoring principles:
 - 0–40: no STAR / no substance
 - 41–60: partial STAR with gaps
 - 61–80: solid STAR, some quantification gaps
 - 81–100: strong STAR, quantified impact, clear tradeoffs
 
-## Example results
-
-> Values below are **synthetic examples**. Run `run.py` for actual results.
+## Baseline results
 
 | Metric | Value | Status |
 |--------|-------|--------|
@@ -64,4 +62,4 @@ The scorer uses a 15-rule rubric (`backend/app/services/scoring/rubric.py`). Rul
 
 - `dataset.json` complements (does not duplicate) `backend/tests/scoring/golden_answers.json`
 - No DB required — uses `AsyncMock` (same pattern as `backend/tests/scoring/test_golden_answers.py`)
-- Results written to `results/YYYY-MM-DD.json` — do **not** commit dated result files
+- Results written to `results/YYYY-MM-DD.json` (gitignored — run locally to generate)

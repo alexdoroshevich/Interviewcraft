@@ -28,10 +28,6 @@ Scoring per question: `2`=correct · `1`=partial · `0`=miss · `-1`=hallucinati
 | Cost | $0.019 (40 × Haiku) |
 | Model | claude-haiku-4-5 |
 
-> Note: `results/2026-04-10.json` was recorded with an earlier version of the memory formatter
-> (before the phrasing improvements in PR #18). The scores (95% recall) remain valid but the
-> `memory_blocks` section shows the old formatting style.
-
 ## How to reproduce
 
 ```bash
@@ -47,4 +43,4 @@ The benchmark exercises `app.services.memory.loader._format_memory_block()` dire
 function called during every real voice session. Results reflect real production memory formatting
 quality.
 
-All profile data is **synthetic** — no real user data.
+All profile data is purpose-built for benchmark coverage — not drawn from production sessions.

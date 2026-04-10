@@ -9,7 +9,7 @@
 
 ## Migration Rules
 - Migration files: `backend/alembic/versions/<NNN>_<description>.py`
-- Numbering: sequential (001, 002, ...). Current: 010
+- Numbering: sequential (001, 002, ...). Current: 018, next: 019
 - NEVER use `::jsonb` cast syntax with asyncpg — use `CAST(:param AS jsonb)`
 - NEVER use `json.dumps()` inline in SQL — pass Python objects, let SQLAlchemy serialize
   EXCEPTION: seeded JSONB data in `op.execute()` bulk inserts needs `json.dumps()` explicitly

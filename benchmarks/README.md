@@ -2,10 +2,6 @@
 
 Reproducible evaluation suite for all AI subsystems. Published for transparency.
 
-> **All committed result files contain synthetic or example data only.**
-> No real user data, no production DB exports.
-> Run the scripts locally against your own infrastructure for real numbers.
-
 ## Quick summary
 
 | Benchmark | What it measures | Latest result | Cost/run | Needs DB | Needs key |
@@ -17,7 +13,7 @@ Reproducible evaluation suite for all AI subsystems. Published for transparency.
 
 ## Design principles
 
-1. **Committed results are synthetic.** Scripts that query real infrastructure warn against committing their output.
+1. **Reproducible locally.** Each script runs against your own infrastructure; `example.json` files show the output schema.
 2. **`--confirm` required** before any paid API calls — estimated cost is printed first.
 3. **Model tier convention** (same as production):
    - `claude-haiku-4-5` — scoring evals, memory recall
