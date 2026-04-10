@@ -6,6 +6,7 @@
 #
 # What it does:
 #   1. Starts Postgres + Redis via docker compose
+#      (chromadb not required -- demo works without vector search)
 #   2. Runs Alembic migrations
 #   3. Seeds the demo user with 10 pre-built sessions
 #   4. Starts the backend + frontend
@@ -34,7 +35,7 @@ echo "==> Running migrations..."
 docker compose run --rm backend alembic upgrade head
 
 echo "==> Seeding demo data..."
-docker compose run --rm backend python /app/scripts/seed_demo.py
+docker compose run --rm backend python /app/scripts/seed_demo.py  # seed_demo.py is in backend/scripts/
 
 echo "==> Starting all services..."
 docker compose up -d backend frontend

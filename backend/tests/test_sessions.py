@@ -137,8 +137,8 @@ async def test_create_session_behavioral(authed_client, mock_redis) -> None:
     user = _make_user()
     session = _make_session(user.id, type_="behavioral")
 
-    # execute() called once: COUNT query → 1 existing session (not first time, under limit)
-    db = _mock_db(execute_side_effects=[_count(1)])
+    # execute() called once: COUNT query → 0 existing sessions (first session, under limit=1)
+    db = _mock_db(execute_side_effects=[_count(0)])
 
     # After refresh, set the type so model_validate works
     async def _refresh(s):
