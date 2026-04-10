@@ -73,12 +73,7 @@ frontend/.playwright-screenshots/
 # Private planning documents
 private/
 
-# Claude Code — internal agent/skill configs and rules (proprietary)
-.claude/agents/
-.claude/skills/
-.claude/scripts/
-.claude/rules/architecture.md
-.claude/rules/voice-pipeline.md
+# Claude Code — runtime/personal data only (agents + skills are public portfolio)
 .claude/agent-memory/
 .claude/sessions/
 .claude/repomix-output.xml
