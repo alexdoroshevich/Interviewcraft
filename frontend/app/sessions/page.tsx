@@ -267,7 +267,7 @@ export default function SessionsPage() {
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AppNav />
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="w-full max-w-3xl xl:max-w-5xl 2xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
         {/* Onboarding */}
         {isFirstTime && <OnboardingBanner />}
 

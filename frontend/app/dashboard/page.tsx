@@ -239,7 +239,7 @@ export default function DashboardPage() {
   if (loading) return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AppNav />
-      <div className="max-w-3xl mx-auto px-4 py-6 grid grid-cols-2 gap-3">
+      <div className="w-full max-w-3xl xl:max-w-5xl 2xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 grid grid-cols-2 gap-3">
         {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
       </div>
     </main>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AppNav />
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
+      <div className="w-full max-w-3xl xl:max-w-5xl 2xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 space-y-6 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             Welcome back{user ? `, ${user.email}` : ""}

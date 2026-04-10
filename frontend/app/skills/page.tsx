@@ -241,7 +241,7 @@ export default function SkillsPage() {
     return (
       <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
         <AppNav />
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        <div className="w-full max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 space-y-4">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-full rounded-xl" />
           <Skeleton className="h-64 w-full rounded-xl" />
@@ -267,7 +267,7 @@ export default function SkillsPage() {
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AppNav />
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="w-full max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
         {/* Stats row */}
         {graph && graph.total_skills > 0 && (
           <Card className="mb-6">

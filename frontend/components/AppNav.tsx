@@ -37,8 +37,8 @@ export function AppNav({ showBack }: { showBack?: boolean }) {
 
   return (
     <>
-      <nav className="glass border-b border-slate-200/60 dark:border-slate-700/60 px-4 py-2.5 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <nav className="glass border-b border-slate-200/60 dark:border-slate-700/60 px-4 sm:px-6 lg:px-8 xl:px-12 py-2.5 sticky top-0 z-50">
+        <div className="w-full max-w-screen-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
             <button
