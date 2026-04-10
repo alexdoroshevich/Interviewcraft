@@ -61,8 +61,9 @@ def test_format_weakest_skills_with_mistake() -> None:
     assert "System Design" in result
     assert "no capacity planning" in result
     assert "Behavioral" in result
-    # No mistake marker for second skill (only one skill has top_mistake set)
-    assert "declining) -- no capacity planning" in result
+    # Mistake is now in separate section, not inlined with score
+    assert "System Design: no capacity planning" in result
+    assert "Common mistakes by skill" in result
     assert "Behavioral (50, stable)" in result
 
 
@@ -82,7 +83,7 @@ def test_format_strongest_skills() -> None:
 def test_format_recurring_mistakes() -> None:
     doc = _base_doc(recurring_mistakes=["skips STAR format", "uses filler words"])
     result = _format_memory_block(doc)
-    assert "Recurring mistakes" in result
+    assert "Recurring session mistakes" in result
     assert "skips STAR format" in result
     assert "uses filler words" in result
 

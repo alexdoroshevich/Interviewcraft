@@ -103,3 +103,13 @@ bash.exe.stackdump
 # k6 load test results
 k6/results.json
 .env.k6
+
+# Benchmark output — dated result files may expose model behaviour or real user data
+# Only example.json (synthetic) is safe to commit
+benchmarks/memory-recall/results/[0-9]*.json
+benchmarks/cost-profile/results/[0-9]*.json
+benchmarks/voice-latency/results/[0-9]*.json
+benchmarks/scoring-quality/results/[0-9]*.json
+
+# Script-adjacent benchmark results (ad-hoc runs)
+backend/scripts/*_results.json

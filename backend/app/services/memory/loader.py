@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.interview_session import InterviewSession
 from app.models.skill_graph_node import SkillGraphNode
+from app.models.user import User
 from app.models.user_memory import UserMemory
 
 logger = structlog.get_logger(__name__)
@@ -138,6 +139,8 @@ async def _bootstrap_from_skills(
 
     Used before the MemoryBuilder has run. Provides immediate value by
     surfacing weakest/strongest skills from the existing skill graph.
+    Also enriches with avg_score and goal context from stored profile
+    data so bootstrapped docs reach parity with LLM-built ones.
     """
     skills_result = await db.execute(
         select(SkillGraphNode)
@@ -180,12 +183,31 @@ async def _bootstrap_from_skills(
         .where(InterviewSession.status == "completed")
     )
     doc["total_sessions"] = count_result.scalar() or 0
+    doc["avg_score"] = int(sum(s.current_score for s in all_skills) / len(all_skills))
+
+    if not doc.get("target_role") and not doc.get("target_level"):
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user_row = user_result.scalar_one_or_none()
+        if user_row and user_row.profile:
+            profile = user_row.profile
+            parsed = profile.get("resume") or {}
+            sa = profile.get("self_assessment") or {}
+            if not doc.get("target_role"):
+                doc["target_role"] = parsed.get("target_role") or sa.get("target_role")
+            if not doc.get("target_level"):
+                doc["target_level"] = parsed.get("target_level") or sa.get("target_level")
+            if not doc.get("career_goal"):
+                doc["career_goal"] = parsed.get("career_goal")
 
     return doc
 
 
 def _format_memory_block(doc: dict[str, Any]) -> str:
-    """Format memory document into the system prompt injection block."""
+    """Format memory document into the system prompt injection block.
+
+    Uses numbered lists and explicit section counts so the LLM can
+    accurately reference quantities without conflating sections.
+    """
     total = doc.get("total_sessions", 0)
     if total == 0:
         return ""
@@ -199,7 +221,6 @@ def _format_memory_block(doc: dict[str, Any]) -> str:
         "",
     ]
 
-    # Career
     career_lines: list[str] = []
     if doc.get("target_role") or doc.get("target_level"):
         parts = [p for p in [doc.get("target_role"), doc.get("target_level")] if p]
@@ -213,64 +234,67 @@ def _format_memory_block(doc: dict[str, Any]) -> str:
         lines.extend(career_lines)
         lines.append("")
 
-    # Weakest skills
     weakest = doc.get("weakest_skills", [])
     if weakest:
-        lines.append("Weakest areas (focus your probing here):")
-        for s in weakest:
-            mistake = f" -- {s['top_mistake']}" if s.get("top_mistake") else ""
-            lines.append(f"- {s['skill']} ({s['score']}, {s['trend']}){mistake}")
+        lines.append(f"Weakest areas (focus your probing here) [{len(weakest)} tracked]:")
+        for i, s in enumerate(weakest, 1):
+            lines.append(f"{i}. {s['skill']} ({s['score']}, {s['trend']})")
         lines.append("")
 
-    # Strongest skills
+    skill_mistakes = [(s["skill"], s["top_mistake"]) for s in weakest if s.get("top_mistake")]
+    if skill_mistakes:
+        lines.append(f"Common mistakes by skill [{len(skill_mistakes)} noted, from skill history]:")
+        for skill, mistake in skill_mistakes:
+            lines.append(f"- {skill}: {mistake}")
+        lines.append("")
+
     strongest = doc.get("strongest_skills", [])
     if strongest:
-        lines.append("Strongest areas:")
-        for s in strongest:
-            lines.append(f"- {s['skill']} ({s['score']}, {s['trend']})")
+        lines.append(f"Strongest areas [{len(strongest)} tracked]:")
+        for i, s in enumerate(strongest, 1):
+            lines.append(f"{i}. {s['skill']} ({s['score']}, {s['trend']})")
         lines.append("")
 
-    # Recurring mistakes
     mistakes = doc.get("recurring_mistakes", [])
     if mistakes:
-        lines.append("Recurring mistakes to watch for:")
-        for m in mistakes:
-            lines.append(f"- {m}")
+        lines.append(f"Recurring session mistakes [{len(mistakes)} recorded, most recent last]:")
+        for i, m in enumerate(mistakes, 1):
+            lines.append(f"{i}. {m}")
         lines.append("")
 
-    # Stories
     stories = doc.get("best_stories", [])
     if stories:
-        lines.append("Best stories (reference naturally if relevant):")
-        for s in stories:
+        lines.append(f"Best stories (reference naturally if relevant) [{len(stories)} total]:")
+        for i, s in enumerate(stories, 1):
             comps = ", ".join(s.get("competencies", []))
             tip = f" -- Tip: {s['tip']}" if s.get("tip") else ""
-            lines.append(f'- "{s["title"]}" (score {s.get("best_score", 0)}) -- {comps}{tip}')
+            lines.append(f'{i}. "{s["title"]}" (score {s.get("best_score", 0)}) -- {comps}{tip}')
         lines.append("")
 
-    # Communication
     comm = doc.get("communication_notes", [])
     if comm:
-        lines.append("Communication patterns:")
-        for note in comm:
-            lines.append(f"- {note}")
+        lines.append(f"Communication patterns [{len(comm)} observed]:")
+        for i, note in enumerate(comm, 1):
+            lines.append(f"{i}. {note}")
         lines.append("")
 
-    # Coaching insights
     coaching = doc.get("coaching_insights", [])
     if coaching:
-        lines.append("Coaching notes:")
-        for ci in coaching:
-            lines.append(f"- {ci.get('insight', ci) if isinstance(ci, dict) else ci}")
+        lines.append(f"Coaching notes [{len(coaching)} recorded]:")
+        for i, ci in enumerate(coaching, 1):
+            if isinstance(ci, dict):
+                count = ci.get("evidence_count", 1)
+                insight = ci.get("insight", "")
+                lines.append(f"{i}. [observed {count}x] {insight}")
+            else:
+                lines.append(f"{i}. {ci}")
         lines.append("")
 
-    # Current focus
     focus = doc.get("current_focus")
     if focus:
         lines.append(f"Current focus: {focus}")
         lines.append("")
 
-    # Stats
     avg = doc.get("avg_score")
     if avg is not None:
         lines.append(f"Session stats: {total} sessions completed, average score {avg}")
