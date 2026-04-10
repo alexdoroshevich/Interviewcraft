@@ -300,4 +300,3 @@ def _format_memory_block(doc: dict[str, Any]) -> str:
         lines.append(f"Session stats: {total} sessions completed, average score {avg}")
 
     return "\n".join(lines)
-
