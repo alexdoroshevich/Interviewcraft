@@ -1,0 +1,30 @@
+{
+  "_note": "EXAMPLE — synthetic values approximating real-world usage. Run query.py against your DB for actual numbers.",
+  "_generated_at": "2026-04-10 (example)",
+  "by_quality_profile": [
+    {
+      "quality_profile": "balanced",
+      "sessions": 47,
+      "avg_cost_per_session_usd": 0.031,
+      "cost_breakdown_note": "Haiku for scoring/diff/memory, Sonnet for voice"
+    },
+    {
+      "quality_profile": "quality",
+      "sessions": 12,
+      "avg_cost_per_session_usd": 0.078,
+      "cost_breakdown_note": "Sonnet for all operations"
+    }
+  ],
+  "by_provider_operation": [
+    {"provider": "anthropic", "operation": "voice_llm",    "avg_cost_usd": 0.0041, "avg_latency_ms": 312,  "call_count_example": 470},
+    {"provider": "anthropic", "operation": "scoring_llm",  "avg_cost_usd": 0.0018, "avg_latency_ms": 1850, "call_count_example": 282},
+    {"provider": "anthropic", "operation": "memory_build", "avg_cost_usd": 0.0004, "avg_latency_ms": 420,  "call_count_example": 59},
+    {"provider": "deepgram",  "operation": "stt",          "avg_cost_usd": 0.0012, "avg_latency_ms": 178,  "call_count_example": 4230},
+    {"provider": "elevenlabs","operation": "tts",          "avg_cost_usd": 0.0019, "avg_latency_ms": 390,  "call_count_example": 2840}
+  ],
+  "anthropic_cache": {
+    "total_calls": 583,
+    "cache_hit_pct": 71.2,
+    "note": "Rubric prefix (~4K tokens) is cached on first call per session. Cache hit eliminates ~70% of input token cost for scoring."
+  }
+}

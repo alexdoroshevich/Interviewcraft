@@ -1,0 +1,17 @@
+{
+  "_note": "EXAMPLE — synthetic values. Run analyze.py against your DB for real data.",
+  "measurement_window": "30 days",
+  "total_turns_analyzed": 1240,
+  "e2e_latency_ms":  {"p50": 720,  "p95": 940,  "p99": 1380},
+  "stt_latency_ms":  {"p50": 175,  "p95": 310},
+  "llm_ttft_ms":     {"p50": 295,  "p95": 520},
+  "tts_latency_ms":  {"p50": 380,  "p95": 610},
+  "dominant_step_pct_of_e2e_p50": {
+    "stt":      "24%",
+    "llm_ttft": "41%",
+    "tts":      "53%"
+  },
+  "kpi_status": "PASS",
+  "kpi_target_e2e_p95_ms": 1000,
+  "kpi_note": "p95 940ms < 1000ms target. Sentence-streaming optimization reduces perceived latency by dispatching TTS after first LLM sentence."
+}

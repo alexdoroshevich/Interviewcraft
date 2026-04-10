@@ -244,6 +244,21 @@ Key decisions are documented in [`docs/adr/`](docs/adr/):
 
 ---
 
+## Benchmarks
+
+The [`benchmarks/`](benchmarks/) directory contains reproducible evaluations of the system's AI subsystems. All scripts require a valid Anthropic API key and run against the real model APIs. Dated output files are gitignored — only synthetic `example.json` baselines are committed.
+
+| Benchmark | What it measures | KPI |
+|-----------|-----------------|-----|
+| [memory-recall](benchmarks/memory-recall/) | Does the LLM accurately recall injected coaching context? | ≥ 95% recall, 0% hallucination |
+| [scoring-quality](benchmarks/scoring-quality/) | Do automated scores correlate with human judgement? | Pearson r ≥ 0.85, MAE ≤ 10 |
+| [voice-latency](benchmarks/voice-latency/) | STT → LLM → TTS latency (mock + production) | E2E p95 < 1 000 ms |
+| [cost-profile](benchmarks/cost-profile/) | Cost per session by quality profile and provider | — |
+
+Run any benchmark with `--confirm` to execute live API calls (see each README for cost estimates). Use the mock scripts to explore latency characteristics without any API keys.
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

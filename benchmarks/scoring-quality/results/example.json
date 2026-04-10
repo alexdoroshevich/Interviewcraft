@@ -1,0 +1,20 @@
+{
+  "_note": "EXAMPLE OUTPUT -- synthetic values. Run run.py for actual results.",
+  "model": "claude-haiku-4-5",
+  "profile": "balanced",
+  "dataset_size": 20,
+  "runs_per_entry": 3,
+  "pearson_r": 0.91,
+  "mae": 6.2,
+  "within_range_pct": 82.0,
+  "rule_precision": 0.74,
+  "rule_recall": 0.68,
+  "variance_max": 11,
+  "cost_usd": 0.108,
+  "kpi_status": "PASS",
+  "kpi_targets": {
+    "pearson_r_min": 0.80,
+    "mae_max": 8.0,
+    "within_range_pct_min": 75.0
+  }
+}
