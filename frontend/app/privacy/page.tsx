@@ -129,7 +129,7 @@ export default function PrivacyPolicyPage() {
 
         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-3">7. Cookies</h2>
         <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-          InterviewCraft uses <code>localStorage</code> (not cookies) to store your authentication token client-side. We do not use tracking cookies or third-party analytics scripts.
+          InterviewCraft stores your access token in memory only (never in localStorage or sessionStorage). A session cookie (<code>refresh_token</code>) is set as httpOnly and SameSite=Lax — JavaScript cannot read it. We do not use tracking cookies or third-party analytics scripts.
         </p>
 
         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-3">8. Children&apos;s Privacy</h2>

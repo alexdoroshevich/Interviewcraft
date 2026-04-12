@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, ApiError, JdAnalysisResponse, CompanyIntelItem, CompanyIntelListResponse } from "@/lib/api";
+import { api, ApiError, JdAnalysisResponse, CompanyIntelItem, CompanyIntelListResponse, clearToken } from "@/lib/api";
 import { AppNav } from "@/components/AppNav";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -193,11 +193,6 @@ function NewSessionForm() {
   const [hasAnthropicKey, setHasAnthropicKey] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
     // Fetch current session count + BYOK state to drive the free-session banner.
     // Both calls are independent and degrade gracefully on error.
     api.sessions
@@ -268,7 +263,7 @@ function NewSessionForm() {
     } catch (err: unknown) {
       if (err instanceof Error) {
         if (err.message.includes("credentials") || err.message.includes("401")) {
-          localStorage.removeItem("access_token");
+          clearToken();
           router.push("/login");
           return;
         }

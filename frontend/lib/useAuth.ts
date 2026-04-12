@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { tryRefreshToken } from "@/lib/api";
 
 /**
- * Checks for access_token in localStorage.
- * Redirects to /login if missing.
+ * Silently refreshes the access token via the httpOnly refresh cookie.
+ * Redirects to /login if the cookie is absent or expired.
  * Returns { ready } — only render the page when ready is true.
  */
 export function useAuth() {
@@ -13,12 +14,13 @@ export function useAuth() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.push("/login");
-    } else {
-      setReady(true);
-    }
+    tryRefreshToken().then((token) => {
+      if (!token) {
+        router.push("/login");
+      } else {
+        setReady(true);
+      }
+    });
   }, [router]);
 
   return { ready };

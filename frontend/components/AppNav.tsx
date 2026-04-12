@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, clearToken } from "@/lib/api";
 import { useTheme } from "@/components/ThemeProvider";
 
 const NAV_ITEMS = [
@@ -23,15 +23,13 @@ export function AppNav({ showBack }: { showBack?: boolean }) {
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
     api.auth.me()
       .then((u) => setUserEmail(u.email))
       .catch(() => {});
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem("access_token");
+    clearToken();
     router.push("/");
   }
 

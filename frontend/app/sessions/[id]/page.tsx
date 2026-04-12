@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useVoiceSession, SessionState, TranscriptEntry } from "@/lib/useVoiceSession";
-import { api, SessionResponse } from "@/lib/api";
+import { api, getToken, SessionResponse } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { DrawingCanvas } from "@/components/DrawingCanvas";
 import { CodeNotebook } from "@/components/CodeNotebook";
@@ -390,8 +390,7 @@ export default function SessionPage() {
   const { ready } = useAuth();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const accessToken =
-    typeof window !== "undefined" ? (localStorage.getItem("access_token") ?? "") : "";
+  const accessToken = getToken() ?? "";
 
   // Convert http(s):// API URL to ws(s):// for WebSocket — keeps WS consistent with REST base
   const wsBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080")

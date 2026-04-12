@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { DiffVersions, DiffVersion } from "./LintCard";
+import { getToken } from "@/lib/api";
 
 // ── Signal-to-noise highlighting ──────────────────────────────────────────────
 // Signal words (facts, numbers, actions) are bright; noise (filler, hedging) is dimmed.
@@ -106,7 +107,7 @@ export function DiffView({ originalScore, diffVersions, originalAnswer, sessionI
 
     setLoadingAudio(true);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const token = getToken();
       const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
       const res = await fetch(
         `${API_BASE}/api/v1/sessions/${sessionId}/scores/${segmentIndex}/play-ideal`,

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { api, SettingsResponse, ApiError } from "@/lib/api";
+import { api, clearToken, SettingsResponse, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { AppNav } from "@/components/AppNav";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -499,7 +499,7 @@ function SettingsContent() {
                   setDeletingAccount(true);
                   try {
                     await api.settings.deleteAccount();
-                    localStorage.removeItem("access_token");
+                    clearToken();
                     router.push("/?deleted=1");
                   } catch {
                     setDeletingAccount(false);
