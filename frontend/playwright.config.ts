@@ -38,9 +38,14 @@ export default defineConfig({
   // CI: use the pre-built production server (npm run build must run first).
   // Local: reuse an existing dev server if one is already running.
   webServer: {
-    command: process.env.CI ? "npm start" : "npm run dev",
+    // CI: Next.js is built with output:standalone, so next start won't work.
+    // Use the standalone server directly. Local dev reuses an existing server.
+    command: process.env.CI
+      ? "node .next/standalone/server.js"
+      : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    env: process.env.CI ? { PORT: "3000", HOSTNAME: "0.0.0.0" } : {},
   },
 });

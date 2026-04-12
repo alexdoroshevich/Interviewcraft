@@ -82,6 +82,12 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8080
 
+      # Standalone output needs static files copied manually
+      - name: Copy static assets into standalone bundle
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+
       - name: Run landing page E2E tests
         run: npx playwright test e2e/01-landing.spec.ts --project=chromium
         env:
