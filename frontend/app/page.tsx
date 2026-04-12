@@ -280,9 +280,9 @@ export default function HomePage() {
           </p>
           <div className="grid grid-cols-3 gap-3 mb-5 text-center">
             {[
-              ["15", "Claude Code agents"],
-              ["4", "benchmark suites"],
-              ["34", "PRs merged"],
+              ["940ms", "p95 voice latency"],
+              ["0.91", "scoring Pearson r"],
+              ["4.1 pts", "avg scoring variance"],
             ].map(([n, label]) => (
               <div key={label} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
                 <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{n}</p>
@@ -304,14 +304,14 @@ export default function HomePage() {
       {/* KPI strip */}
       <section className="bg-gradient-to-r from-indigo-600 to-violet-600 py-10 sm:py-16">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-indigo-200 text-sm font-medium mb-2">Design Targets</p>
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 sm:mb-8">Measurable goals, not vibes</h2>
+          <p className="text-indigo-200 text-sm font-medium mb-2">Benchmark Results</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 sm:mb-8">Measured, not estimated</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-sm">
             {[
-              ["< 2s", "voice latency p95"],
-              ["< 8 pts", "scoring variance"],
-              ["> 60%", "cache hit rate"],
-              ["+8 avg", "rewind delta"],
+              ["940ms", "p95 voice latency"],
+              ["4.1 pts", "scoring variance"],
+              ["0.91", "scoring Pearson r"],
+              ["95%", "memory recall"],
             ].map(([val, label]) => (
               <div key={label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
                 <p className="text-xl font-bold text-white font-mono">{val}</p>
@@ -343,7 +343,6 @@ export default function HomePage() {
           <div className="flex items-center gap-4 sm:gap-6 text-xs text-slate-400">
             <Link href="/tos" className="py-2 px-1 hover:text-slate-600 hover:underline transition-colors min-h-[44px] flex items-center">Terms</Link>
             <Link href="/privacy" className="py-2 px-1 hover:text-slate-600 hover:underline transition-colors min-h-[44px] flex items-center">Privacy</Link>
-            <Link href="/admin/metrics" className="py-2 px-1 hover:text-slate-600 hover:underline transition-colors min-h-[44px] flex items-center">Admin</Link>
           </div>
           <p className="text-xs text-slate-400">&copy; {new Date().getFullYear()} InterviewCraft</p>
         </div>

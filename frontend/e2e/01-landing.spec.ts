@@ -19,8 +19,8 @@ test("landing page feature tiles present", async ({ page }) => {
   await expect(page.locator("text=Negotiation Simulator")).toBeVisible();
 });
 
-test("CTA links to new session", async ({ page }) => {
+test("CTA links to login", async ({ page }) => {
   await page.goto("/");
   const cta = page.locator("text=Start practicing free").first();
-  await expect(cta).toHaveAttribute("href", /sessions\/new/);
+  await expect(cta).toHaveAttribute("href", /login/);
 });
