@@ -208,123 +208,96 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* Coming soon */}
+      {/* Interview tracks */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
+        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-5 sm:mb-6 text-center">
+          Built for senior technical interviews
+        </h2>
         <div className="card p-5 sm:p-8 bg-gradient-to-br from-indigo-50/50 to-violet-50/50 dark:from-indigo-950/20 dark:to-violet-950/20 border border-indigo-100 dark:border-indigo-900/50">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-violet-200 dark:border-violet-800">
-              Coming Soon
-            </span>
-          </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">
-            Built for every profession — not just tech
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
-            InterviewCraft starts with software engineering. We are building interview prep for every career — from operating rooms to courtrooms to trading floors. Each profession gets its own question bank, scoring rubric, and interviewer persona.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+            Every session type has its own scoring rubric, question bank, and company playbook. The skill graph tracks 22 microskills across all session types — weaknesses surface regardless of which format exposed them.
           </p>
-
-          <div className="space-y-4">
-            {/* Tech expansion */}
-            <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Tech & Engineering</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-                {[
-                  ["Product Management", "Case studies, metrics, prioritization"],
-                  ["Data Science / ML", "SQL, statistics, model design"],
-                  ["Engineering Manager", "People leadership, org design"],
-                  ["DevOps / SRE", "Incident response, reliability"],
-                  ["Security Engineer", "Threat modeling, pen testing"],
-                  ["Frontend / Mobile", "DOM, performance, accessibility"],
-                  ["Data Engineering", "Pipelines, warehousing, Spark"],
-                  ["UX Research", "Study design, synthesis, stakeholders"],
-                ].map(([title, sub]) => (
-                  <div key={title} className="bg-white/60 dark:bg-slate-800/40 rounded-xl p-2.5 border border-slate-200/60 dark:border-slate-700/40">
-                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">{sub}</p>
-                  </div>
-                ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              {
+                type: "Behavioral",
+                tag: "STAR · leadership · conflict · growth",
+                skills: "Structured storytelling, quantifiable results, ownership signal",
+                companies: "Google, Meta, Amazon, Stripe",
+              },
+              {
+                type: "System Design",
+                tag: "SWE · Staff · Principal",
+                skills: "Capacity estimation, tradeoff analysis, API design, reliability",
+                companies: "Uber, Airbnb, Datadog, Cloudflare",
+              },
+              {
+                type: "Coding Discussion",
+                tag: "Technical depth · no whiteboard",
+                skills: "Complexity analysis, debugging approach, testing strategy",
+                companies: "All engineering orgs",
+              },
+              {
+                type: "Salary Negotiation",
+                tag: "Offers · counter · equity",
+                skills: "Anchoring, value articulation, counter-strategy, emotional control",
+                companies: "Any offer stage",
+              },
+              {
+                type: "Debrief",
+                tag: "Post-session · coach mode",
+                skills: "Pattern recognition across sessions, targeted drill assignment",
+                companies: "—",
+              },
+              {
+                type: "Diagnostic",
+                tag: "Baseline · first session",
+                skills: "Full 22-skill assessment to seed the skill graph",
+                companies: "—",
+              },
+            ].map(({ type, tag, skills, companies }) => (
+              <div key={type} className="bg-white/60 dark:bg-slate-800/40 rounded-xl p-3.5 border border-slate-200/60 dark:border-slate-700/40">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{type}</p>
+                <p className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium mt-0.5 mb-1.5">{tag}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">{skills}</p>
+                {companies !== "—" && (
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1.5">Playbooks: {companies}</p>
+                )}
               </div>
-            </div>
-
-            {/* Business & finance */}
-            <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Business & Finance</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-                {[
-                  ["Management Consulting", "Case interviews, market sizing, frameworks"],
-                  ["Investment Banking", "DCF, LBO, deal structuring, fit questions"],
-                  ["Financial Analyst", "Valuation, modeling, markets, EBITDA"],
-                  ["Accounting / Audit", "GAAP, Big 4 controls, compliance, CPA"],
-                  ["Sales & Account Mgmt", "Discovery, objection handling, quotas"],
-                  ["Operations / Supply Chain", "Lean, logistics, ERP, procurement"],
-                  ["Marketing Manager", "Campaign strategy, analytics, ROI"],
-                  ["HR / Talent Acquisition", "Recruitment strategy, sourcing, HRBP"],
-                ].map(([title, sub]) => (
-                  <div key={title} className="bg-white/60 dark:bg-slate-800/40 rounded-xl p-2.5 border border-slate-200/60 dark:border-slate-700/40">
-                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">{sub}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Healthcare */}
-            <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Healthcare & Medicine</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-                {[
-                  ["Physician / Resident", "MMI ethics, clinical reasoning, AAMC"],
-                  ["Dentist / Dental School", "MMI scenarios, patient communication"],
-                  ["Registered Nurse", "Patient safety, NCLEX scenarios, STAR"],
-                  ["Pharmacist", "Drug interactions, clinical counseling"],
-                  ["Physical Therapist", "Clinical scenarios, patient assessment"],
-                  ["Social Worker", "Ethics, case scenarios, NASW standards"],
-                ].map(([title, sub]) => (
-                  <div key={title} className="bg-white/60 dark:bg-slate-800/40 rounded-xl p-2.5 border border-slate-200/60 dark:border-slate-700/40">
-                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">{sub}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Legal & Education */}
-            <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Legal, Education & Public Sector</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-                {[
-                  ["Attorney / Lawyer", "Case analysis, ethics, law firm fit"],
-                  ["Paralegal", "Legal research, drafting, e-discovery"],
-                  ["Teacher / Educator", "Classroom management, differentiation"],
-                  ["Academic Researcher", "Grant proposals, peer review, funding"],
-                  ["Government / Policy", "Competency-based, OPM framework"],
-                ].map(([title, sub]) => (
-                  <div key={title} className="bg-white/60 dark:bg-slate-800/40 rounded-xl p-2.5 border border-slate-200/60 dark:border-slate-700/40">
-                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">{sub}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
-
-          <p className="text-center text-xs text-slate-400 mt-5">
-            Every profession listed has a verified question bank. More roles added weekly.
-          </p>
         </div>
       </section>
 
-      {/* Demo video */}
+      {/* Open development */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-5 sm:mb-6 text-center">
-          See It In Action
+          Built in public
         </h2>
-        <div className="aspect-video bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-slate-800 shadow-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14 text-indigo-400 mb-4 opacity-60">
-            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.024-.983a1.125 1.125 0 010 1.966l-5.603 3.113A1.125 1.125 0 019 15.113V8.887c0-.857.921-1.4 1.671-.983l5.603 3.113z" clipRule="evenodd" />
-          </svg>
-          <p className="text-slate-400 text-sm font-medium">3-minute demo video — coming soon</p>
-          <p className="text-slate-600 text-xs mt-1">Full closed-loop walkthrough: voice → lint → diff → rewind → skill graph</p>
+        <div className="card p-6 sm:p-8 border border-slate-200 dark:border-slate-700">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
+            The full source — backend, frontend, CI pipeline, benchmark suite, and the multi-agent Claude Code development workflow — is on GitHub. Architecture decisions are documented in ADRs. Scoring quality, voice latency, and memory recall are tracked with benchmarks, not vibes.
+          </p>
+          <div className="grid grid-cols-3 gap-3 mb-5 text-center">
+            {[
+              ["15", "Claude Code agents"],
+              ["4", "benchmark suites"],
+              ["34", "PRs merged"],
+            ].map(([n, label]) => (
+              <div key={label} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{n}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+          <a
+            href="https://github.com/alexdoroshevich/interviewcraft"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary w-full text-center block text-sm py-2.5"
+          >
+            View source on GitHub →
+          </a>
         </div>
       </section>
 

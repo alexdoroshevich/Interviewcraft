@@ -129,7 +129,7 @@ Selecting the full technology stack for InterviewCraft's backend, frontend, data
 1. **Python over Go/Node** — slightly lower raw throughput, but AI ecosystem + async FastAPI is sufficient for <100 concurrent users at MVP
 2. **PostgreSQL JSONB over dedicated graph DB** — skill graph is 20-30 nodes; a graph DB adds complexity without benefit at this scale
 3. **JWT over sessions** — no server-side session storage needed; refresh token rotation is secure enough for MVP
-4. **No BYOK at MVP** — provider abstractions are in place; adding BYOK is mechanical work deferred to Phase 2
+4. **No BYOK at MVP** — provider abstractions are in place; BYOK shipped in Phase 2 (Fernet encryption, per-session key decryption, `DELETE /api/v1/settings/byok`)
 
 ---
 

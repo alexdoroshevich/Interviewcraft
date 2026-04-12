@@ -59,4 +59,4 @@ InterviewCraft handles sensitive personal data: voice recordings, interview answ
 | Transcripts stored long-term | Required for rewind, scoring, story detection. User can delete account. |
 | 14-day word timestamp TTL | Enough for active sessions; reduces storage. Old rewinds fall back to utterance-level. |
 | No audio storage | Simplifies privacy. Rewind = re-ask (not replay). Spec constraint. |
-| pgcrypto vs application-level encryption | pgcrypto simpler to operate; application-level deferred to Phase 2 with BYOK. |
+| pgcrypto vs application-level encryption | Application-level Fernet encryption shipped in Phase 2 for BYOK keys. `users.byok_keys` JSONB uses Fernet; all other user data uses PostgreSQL-level security. |
