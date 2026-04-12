@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
           <p><strong className="text-slate-700 dark:text-slate-300">Session transcripts:</strong> The text of your spoken answers during interview sessions. Audio is processed in real-time by our speech-to-text provider and is never stored on our servers or to disk.</p>
           <p><strong className="text-slate-700 dark:text-slate-300">Skill data:</strong> Scores, trends, and history generated from your sessions. This is the core of what makes InterviewCraft useful.</p>
           <p><strong className="text-slate-700 dark:text-slate-300">Resume data:</strong> If you upload a resume, we store the extracted text and a structured profile (role, skills, experience summary). The original file is not retained.</p>
-          <p><strong className="text-slate-700 dark:text-slate-300">API keys (BYOK):</strong> If you provide your own API keys, they are encrypted at rest using AES-256 and are only decrypted in memory during your active session. They are never logged or visible to InterviewCraft staff.</p>
+          <p><strong className="text-slate-700 dark:text-slate-300">API keys (BYOK):</strong> If you provide your own API keys, they are encrypted at rest with symmetric encryption before being stored. They are only decrypted in memory for the duration of your active session, then discarded. They are never logged or visible to InterviewCraft staff.</p>
           <p><strong className="text-slate-700 dark:text-slate-300">Usage logs:</strong> Token counts, latency, and cost data per API call for billing transparency. These logs do not contain your answers or transcripts — only session IDs and metrics.</p>
         </div>
 

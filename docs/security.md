@@ -1,6 +1,6 @@
 # InterviewCraft — Security Model
 
-> Threat model, data flow, and encryption details. Last updated: 2026-02-25
+> Threat model, data flow, and encryption details. Last updated: 2026-04-11
 
 ---
 
@@ -54,7 +54,7 @@ position who need to trust the tool.
 - Skill graph, usage logs: stored plaintext (not PII in isolation).
 
 ### In transit
-- All HTTP over TLS (Railway/Fly.io terminates TLS at load balancer).
+- All HTTP over TLS (Fly.io terminates TLS at load balancer; Vercel handles frontend HTTPS).
 - WebSocket: `wss://` (TLS).
 - Internal service communication (backend ↔ Postgres ↔ Redis): within Docker network, plaintext acceptable for MVP; VPC isolation in prod.
 
@@ -91,11 +91,21 @@ SCRUB_PATTERNS = ["sk-ant-*", "dg_*", "el_*", "Bearer "]
 
 ## API Key Management
 
-- Anthropic, Deepgram, and ElevenLabs keys: stored only in `backend/.env` and Railway/Fly.io secrets.
+### Platform keys (Anthropic, Deepgram, ElevenLabs)
+- Stored only in `backend/.env` and Fly.io secrets.
 - **Never** committed to git (`.gitignore` covers `.env`).
 - **Never** stored in the database.
-- **Never** accepted from users in MVP (BYOK deferred to Phase 2).
-- Rotation: update env var → restart backend process. No DB migration needed.
+- Rotation: update Fly.io secret → restart backend. No DB migration needed.
+
+### BYOK — user-supplied keys (shipped Phase 2)
+- Users may provide their own provider keys via `POST /api/v1/settings/byok`.
+- Keys are encrypted with symmetric encryption before writing to `users.byok_keys JSONB`.
+  Implementation: `app/services/byok.py`.
+- Decryption happens **in memory only** at WebSocket session start — the
+  plaintext key exists for the lifetime of one pipeline object, then is discarded.
+- Keys are never logged, never returned in API responses, and never visible
+  to InterviewCraft staff.
+- `DELETE /api/v1/settings/byok/{provider}` removes the encrypted entry.
 
 ---
 

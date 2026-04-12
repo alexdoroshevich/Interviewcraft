@@ -34,13 +34,13 @@ export default defineConfig({
     },
   ],
 
-  // Start the dev server automatically when running locally
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: "npm run dev",
-        url: "http://localhost:3000",
-        reuseExistingServer: true,
-        timeout: 30_000,
-      },
+  // Start the server automatically.
+  // CI: use the pre-built production server (npm run build must run first).
+  // Local: reuse an existing dev server if one is already running.
+  webServer: {
+    command: process.env.CI ? "npm start" : "npm run dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: !process.env.CI,
+    timeout: 60_000,
+  },
 });
