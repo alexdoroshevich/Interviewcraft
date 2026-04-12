@@ -103,7 +103,7 @@ The voice pipeline uses Pipecat which handles provider abstraction internally.
 The ABCs in `interfaces.py` are defined and ready for:
 - Unit testing with mock providers.
 - Swapping providers without changing business logic.
-- BYOK (Phase 2): user provides their own API keys.
+- BYOK (✅ shipped Phase 2): user-supplied provider credentials, encrypted at rest.
 
 ---
 
@@ -118,9 +118,12 @@ The ABCs in `interfaces.py` are defined and ready for:
 
 ---
 
-## Future Work (Phase 2)
+## Phase 2 — Shipped
 
-- BYOK: User provides own API keys → ProviderSet built from user config.
+- **BYOK** ✅ — User-supplied provider credentials encrypted at rest via `app/services/byok.py`. Decrypted in-memory per WebSocket session only.
+- **Interviewer personas** ✅ — Routed via ProviderSet per session config.
+- **TTS fallback chain** ✅ — Primary TTS failure triggers automatic fallback to secondary provider.
+
+## Future Work (Phase 3+)
+
 - Local mode: Ollama/llama.cpp implementation of LLMProvider.
-- Interviewer personas: Different system prompts per persona, routed via ProviderSet.
-- Fallback chains: If ElevenLabs fails → Deepgram Aura → silent mode.

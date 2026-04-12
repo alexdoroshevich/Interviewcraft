@@ -98,13 +98,13 @@ ANSWER → LINT (evidence-based) → DIFF (3 versions) → REWIND (re-answer seg
 
 ## What is Explicitly OUT of MVP
 
-- BYOK (Bring Your Own Key) — provider abstractions ready; implementation Phase 2
-- Local/offline mode — Phase 2
-- Multiple professions (SWE only) — others Phase 2
-- Interviewer personas (tough/friendly) — Phase 2
-- Body language / video — Phase 3
+- ~~BYOK (Bring Your Own Key)~~ — **✅ shipped in Phase 2** (Fernet encryption, `users.byok_keys` JSONB)
+- Local/offline mode — Phase 3
+- Multiple professions (SWE only) — others deferred
+- ~~Interviewer personas (tough/friendly)~~ — **✅ shipped in Phase 2**
+- Body language / video — explicitly ruled out (EU AI Act exposure)
 - Billing/Stripe — free until 100+ users
-- Company playbooks marketplace — Phase 2
+- ~~Company playbooks marketplace~~ — **✅ shipped in Phase 2** (12 companies)
 
 ---
 
@@ -116,6 +116,6 @@ ANSWER → LINT (evidence-based) → DIFF (3 versions) → REWIND (re-answer seg
 4. Dogfooding is the ultimate proof
 5. Build in public creates network before launch
 6. Offline demo is insurance for interview day
-7. BYOK adds complexity without enough MVP value — defer
+7. BYOK adds complexity without enough MVP value — deferred at MVP, shipped in Phase 2
 8. Quality Profiles > raw model picker for UX
 9. Evidence spans (server-extracted) > LLM-generated quotes

@@ -54,24 +54,108 @@ Every session feeds back into a persistent 22-microskill graph. The system knows
 
 ## Architecture
 
-```
-                  GitHub (push to branch)
-                         │
-            ┌────────────┴────────────┐
-            │                         │
-       Fly.io (Backend)         Vercel (Frontend)
-       FastAPI + Python          Next.js + React
-       WebSocket voice           SSR + Edge CDN
-       PostgreSQL + Redis        Auto HTTPS
-       Long-lived processes      Zero config
-            │                         │
-            └────────────┬────────────┘
-                         │
-                User visits website
-                Frontend → NEXT_PUBLIC_API_URL
+### System Overview
+
+```mermaid
+graph TB
+    subgraph Client["Browser"]
+        UI["Next.js 15 App\nSSR + Zustand"]
+    end
+
+    subgraph Vercel["Vercel CDN"]
+        FE["Next.js Frontend\nEdge CDN · Auto HTTPS"]
+    end
+
+    subgraph Fly["Fly.io — FastAPI (Python 3.13)"]
+        API["REST API\n/api/v1/*"]
+        WS["WebSocket\n/api/v1/sessions/{id}/ws"]
+        subgraph Store["Data"]
+            PG[("PostgreSQL 16\nskill graph · sessions\nstories · usage_logs")]
+            RD[("Redis 7\nsession state · cache\nrate limiting")]
+        end
+    end
+
+    subgraph Providers["AI Providers (BYOK-capable)"]
+        DG["Deepgram Nova-2\nSTT · word timestamps"]
+        AN["Anthropic Claude\nSonnet → voice LLM\nHaiku → scoring / memory"]
+        EL["ElevenLabs\nTTS · mp3_44100_128\nfallback → Deepgram TTS"]
+    end
+
+    UI --> FE
+    FE -- "JWT Bearer" --> API
+    UI -- "WebSocket\n?token=JWT" --> WS
+    API --> PG & RD
+    WS --> PG & RD
+    WS --> DG & AN & EL
 ```
 
-**Why split?** Vercel cannot run WebSocket connections or long-lived processes (voice sessions need 30+ minute connections). Fly.io handles the stateful backend; Vercel handles the CDN-optimised frontend.
+> **Why split Fly.io + Vercel?** Vercel serverless cannot hold WebSocket connections open for 20–50 min voice sessions. Fly.io runs the stateful backend as a long-lived process; Vercel handles CDN-optimised static + SSR delivery.
+
+---
+
+### Voice Pipeline
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Mic as Microphone
+    participant WS as WebSocket Server
+    participant STT as Deepgram STT
+    participant LLM as Claude Sonnet
+    participant TTS as ElevenLabs / Deepgram TTS
+    participant DB as PostgreSQL
+
+    Mic->>WS: PCM audio chunks (streaming)
+    WS->>STT: Forward audio stream
+    STT-->>WS: Interim transcripts (low latency)
+    STT-->>WS: Final transcript + word timestamps
+
+    Note over WS: Adaptive debounce<br/>~4 s short answers · ~14 s long<br/>measured from last sound (not last word)<br/>[WAIT] token → skip TTS, keep accumulating
+
+    WS->>LLM: System prompt + cross-session memory + transcript
+    LLM-->>WS: Streaming response chunks
+
+    Note over WS: Barge-in detection<br/>threshold = 80 · 10 consecutive frames (~1 s)<br/>→ cancel TTS if user speaks
+
+    WS->>TTS: Text chunks (streaming)
+
+    Note over TTS: ElevenLabs primary<br/>401 / timeout → auto-fallback to Deepgram TTS
+
+    TTS-->>WS: Audio (mp3_44100_128)
+    WS-->>Mic: Audio playback to user
+
+    WS->>DB: Store segment (question · answer · evidence spans)
+    WS->>DB: Trigger async scoring + skill graph update
+```
+
+---
+
+### The Deliberate-Practice Loop
+
+```mermaid
+flowchart LR
+    A["🎙️ Voice Answer\n± transcription"] --> B
+
+    B["🔍 Lint\n15-rule rubric\nevidence = start_ms/end_ms spans\nno hallucinated quotes"]
+
+    B --> C["📝 Diff\n3 rewrite versions\nminimal · medium · ideal\neach shows +rule → +N pts"]
+
+    C --> D["⏪ Rewind\nre-answer any weak segment\nsame question · fresh slate"]
+
+    D --> E["📈 Delta Score\ninstant per-rule breakdown\n+12 structure · −3 depth"]
+
+    E --> F["🕸️ Skill Graph\n22 microskills\ntrend · spaced-repetition weight\ncross-session memory"]
+
+    F --> G["🎯 Drill Plan\nweakest skills · longest gap\nadaptive scheduling"]
+
+    G -.->|next session| A
+
+    style A fill:#6366f1,color:#fff,stroke:#4f46e5
+    style F fill:#7c3aed,color:#fff,stroke:#6d28d9
+    style G fill:#4f46e5,color:#fff,stroke:#3730a3
+```
+
+**Why this matters:** Most AI interview tools are stateless — one session, one score, no memory. InterviewCraft accumulates a 22-microskill model of your weaknesses and schedules deliberate repetition on the exact skills that are failing. The loop above is what separates deliberate practice from mock interviews.
 
 ---
 
