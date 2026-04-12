@@ -1,6 +1,17 @@
 /**
  * Typed API client — wraps fetch with auth headers.
- * Reads access token from localStorage (set on login/register).
+ *
+ * Token strategy (2026):
+ *   - Access token lives in module-level memory only — never written to
+ *     localStorage or sessionStorage.  XSS cannot exfiltrate it across page
+ *     loads because the variable resets on every navigation.
+ *   - Refresh token lives in an httpOnly, SameSite=Lax cookie set by the
+ *     backend.  JS cannot read it at all.
+ *   - On page load useAuth calls tryRefreshToken() which hits POST /auth/refresh
+ *     (the backend reads the cookie automatically); on success the new access
+ *     token is stored in _accessToken and the page renders.
+ *   - On 401 during any API call, apiFetch auto-refreshes once via the same
+ *     mechanism before giving up and redirecting to /login.
  */
 
 const API_BASE =
@@ -8,9 +19,40 @@ const API_BASE =
     ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080")
     : "http://localhost:8080";
 
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
+// In-memory access token — intentionally not persisted anywhere.
+let _accessToken: string | null = null;
+
+export function setToken(token: string): void {
+  _accessToken = token;
+}
+
+export function clearToken(): void {
+  _accessToken = null;
+}
+
+export function getToken(): string | null {
+  return _accessToken;
+}
+
+/**
+ * Attempt a silent token refresh using the httpOnly refresh cookie.
+ * Call this once on app startup (useAuth hook).
+ * Returns the new access token on success, null on failure.
+ */
+export async function tryRefreshToken(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) return null;
+    const { access_token } = await res.json() as { access_token: string };
+    setToken(access_token);
+    return access_token;
+  } catch {
+    return null;
+  }
 }
 
 class ApiError extends Error {
@@ -40,8 +82,8 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers: { "Content-Type": "application/json" },
     });
     if (refreshRes.ok) {
-      const { access_token } = await refreshRes.json();
-      localStorage.setItem("access_token", access_token);
+      const { access_token } = await refreshRes.json() as { access_token: string };
+      setToken(access_token);
       const retryRes = await fetch(`${API_BASE}${path}`, {
         ...init,
         credentials: "include",
@@ -59,7 +101,7 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       if (retryRes.status === 204) return undefined as unknown as T;
       return retryRes.json();
     } else {
-      localStorage.removeItem("access_token");
+      clearToken();
       if (typeof window !== "undefined") window.location.href = "/login";
       throw new ApiError(401, "Session expired. Please sign in again.");
     }
@@ -574,12 +616,13 @@ export interface ResumeProfileResponse {
  * Does NOT set Content-Type — the browser sets it with the boundary.
  */
 async function apiUpload<T>(path: string, file: File): Promise<T> {
-  const token = getToken();
   const formData = new FormData();
   formData.append("file", file);
+  const token = getToken();
 
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
+    credentials: "include",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
@@ -651,9 +694,9 @@ export const api = {
       }),
 
     downloadReport: async (id: string): Promise<void> => {
-      const token = getToken();
       const res = await fetch(`${API_BASE}/api/v1/sessions/${id}/report`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "Download failed");

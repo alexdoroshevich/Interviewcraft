@@ -20,7 +20,7 @@ declare global {
   }
 }
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, setToken } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ export default function LoginPage() {
         setError(null);
         try {
           const res = await api.auth.googleLogin(response.credential);
-          localStorage.setItem("access_token", res.access_token);
+          setToken(res.access_token);
           router.push("/dashboard");
         } catch (err: unknown) {
           setError(err instanceof Error ? err.message : "Google sign-in failed");
@@ -71,7 +71,7 @@ export default function LoginPage() {
           ? await api.auth.login(email, password)
           : await api.auth.register(email, password);
 
-      localStorage.setItem("access_token", res.access_token);
+      setToken(res.access_token);
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
