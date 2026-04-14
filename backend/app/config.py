@@ -32,6 +32,8 @@ class Settings(BaseSettings):
         "http://localhost:3003",
         "http://localhost:3004",
         "http://localhost:3005",
+        # Production Vercel frontend — required for cross-origin auth cookie flow
+        "https://interviewcraft-ten.vercel.app",
     ]
 
     # ── Anthropic (Claude) ─────────────────────────────────────────────────────

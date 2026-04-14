@@ -47,8 +47,7 @@
     background-color: rgb(30 41 59) !important; /* slate-800 */
   }
 
-  /* Gradient backgrounds → dark neutral (scoped to page-level backgrounds, not UI elements) */
-  .dark main.bg-gradient-to-br,
+  /* Gradient backgrounds → dark neutral (scoped to section-level backgrounds, not UI elements) */
   .dark section.bg-gradient-to-br {
     background: rgb(15 23 42) !important;
   }
@@ -308,7 +307,7 @@
 
   .card {
     @apply bg-white rounded-2xl border border-slate-200/60 shadow-sm
-           dark:bg-slate-800 dark:border-slate-700/60;
+           dark:bg-slate-800 dark:border-slate-600/70;
   }
 
   .card-hover {
