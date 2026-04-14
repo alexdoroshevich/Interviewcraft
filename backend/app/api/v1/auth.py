@@ -388,12 +388,20 @@ async def reset_password(
 
 
 def _set_refresh_cookie(response: Response, token: str) -> None:
-    """Attach the refresh token as an httpOnly, SameSite=Lax cookie."""
+    """Attach the refresh token as an httpOnly cookie.
+
+    Production uses SameSite=None (required for cross-origin requests when the
+    frontend is on Vercel and the API is on Fly.io).  SameSite=None mandates
+    Secure=True, which is already enforced in production.
+
+    Development uses SameSite=Lax so the cookie works on localhost without HTTPS.
+    """
+    is_production = settings.app_env == "production"
     response.set_cookie(
         key=_REFRESH_COOKIE,
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=settings.app_env == "production",
+        samesite="none" if is_production else "lax",
+        secure=is_production,
         max_age=7 * 24 * 60 * 60,
     )

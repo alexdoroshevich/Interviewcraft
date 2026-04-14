@@ -14,10 +14,11 @@
  *     mechanism before giving up and redirecting to /login.
  */
 
+const PROD_API_URL = "https://interviewcraft-api.fly.dev";
 const API_BASE =
   typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080")
-    : "http://localhost:8080";
+    ? (process.env.NEXT_PUBLIC_API_URL ?? PROD_API_URL)
+    : PROD_API_URL;
 
 // In-memory access token — intentionally not persisted anywhere.
 let _accessToken: string | null = null;

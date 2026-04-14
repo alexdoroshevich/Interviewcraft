@@ -32,7 +32,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans bg-white dark:bg-slate-900 transition-colors duration-200">
+      <body className="font-sans bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
         <ThemeProvider><TooltipProvider>{children}</TooltipProvider></ThemeProvider>
         <Toaster richColors position="top-right" />
         {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
