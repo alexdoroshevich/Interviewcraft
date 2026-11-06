@@ -42,7 +42,9 @@ def calc_anthropic_cost(
     if model not in ANTHROPIC_PRICES:
         raise ValueError(f"Unknown Anthropic model: {model}")
     rates = ANTHROPIC_PRICES[model]
-    if any(count < 0 for count in (input_tokens, output_tokens, cached_tokens, cache_creation_tokens)):
+    if any(
+        count < 0 for count in (input_tokens, output_tokens, cached_tokens, cache_creation_tokens)
+    ):
         raise ValueError("Token counts must be non-negative")
     cost = (
         (input_tokens / 1_000_000) * rates["input"]

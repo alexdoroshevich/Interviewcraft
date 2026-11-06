@@ -123,7 +123,6 @@ _SCORING_SCHEMA: dict[str, Any] = {
                 "medium": {"$ref": "#/$defs/diff_version"},
                 "ideal": {"$ref": "#/$defs/diff_version"},
             },
-
         },
         "memory_hints": {
             "type": "object",
