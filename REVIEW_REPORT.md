@@ -1,6 +1,6 @@
 # Interviewcraft — final editorial and GitHub preparation review
 
-6 November 2026. Local work only: no commit, push, workflow dispatch, deployment, account/visibility changes or paid API calls. No new functionality, infrastructure, dependencies or design changes.
+Initial local-review snapshot: 6 November 2026, before commit/push/deployment. The subsequent security repair and GitHub release preparation are recorded at the end of this report.
 
 ## Public presentation
 
@@ -63,3 +63,19 @@ Existing workflow files were inspected and left unchanged:
 **Next action is owner review of the local diff and release automation.** Before any remote operation, confirm whether automatic Claude review and hosting previews are intended. Then, with separate commit/push approval, create signed DCO Conventional Commits for the scoped changes, push the named feature branch and open a PR to main. Keep the original user lockfile change identified separately. Watch all CI to completion. Before merge, make the existing production trigger and hosting Git integrations match the owner's publication decision. Do not merge while publication is still prohibited; the current deploy trigger can publish automatically. No permanent public AI backend is required for showcasing the source, architecture and screenshots.
 
 Portfolio remains on its existing local branch with no remote configured. Its three editorial/test files are included separately in the review bundle; none of its unrelated pending changes were staged or attributed to this pass.
+
+
+## Security remediation for PR #56
+
+The first hosted quality gate found dependency-audit failures. These were repaired on the same PR without audit exclusions, ignored advisory IDs, weakened thresholds or new product features.
+
+- Removed the unused Pipecat/NumPy dependency chain and the unused installed shadcn CLI; the custom asyncio voice runtime and existing UI components remain.
+- Replaced python-jose/ecdsa with PyJWT, retaining the configured algorithm whitelist and the existing invalid-token response handling. Compatibility tests independently construct the previous compact HS256 format for access, refresh and password-reset tokens. Additional tests reject modified, unsigned, expired and wrong-algorithm tokens. See [PyJWT verification API](https://pyjwt.readthedocs.io/en/stable/api.html).
+- Replaced PyPDF2 with its maintained successor pypdf, using the same PdfReader interface. A real synthetic single-page PDF exercises text extraction; malformed PDF still produces 422. See [pypdf project history](https://pypdf.readthedocs.io/en/stable/meta/history.html).
+- Updated Next.js within version15 to15.5.29 and aligned eslint-config-next. Updated Vite/Vitest within a compatible Node20.19+ toolchain; React18 and Tailwind3 are unchanged. Targeted PostCSS/minimatch overrides fix pinned transitive dependencies. See [Vitest4 migration requirements](https://v4.vitest.dev/guide/migration.html).
+- CI and Docker bootstrap pip26.3+; the frontend quality gate now uses npm ci with the committed lockfile. Dependency audits remain active.
+- Kept the original user's optional Windows SWC lockfile entry in the working copy and saved the original bytes and patch locally. It is excluded from the committed clean lockfile.
+
+Fresh local results: **428 backend tests passed,40 integration/nightly deselected,80.27% coverage**; Ruff and Mypy (93source files) passed. The nine added tests cover JWT/PDF compatibility and rejection. Frontend clean install, lint, TypeScript,9Vitest tests and production build passed. Ruff0.11.0, matching pre-commit, accepted all158backend files. Fresh pip-audit and npm audit both reported **0 known vulnerabilities**, including development dependencies. These are point-in-time audit results, not a guarantee against future advisories.
+
+Hosted CI and deployment outcomes belong to the final commit's [PR checks](https://github.com/alexdoroshevich/Interviewcraft/pull/56/checks). Full live voice/scoring/next-session memory and updated portfolio-model response evaluation remain unverified; no paid provider calls were made during this security repair.

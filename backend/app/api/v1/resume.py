@@ -42,9 +42,9 @@ _ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 
 
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from a PDF file using PyPDF2."""
+    """Extract text from a PDF file using pypdf."""
     try:
-        from PyPDF2 import PdfReader
+        from pypdf import PdfReader
 
         reader = PdfReader(io.BytesIO(file_bytes))
         pages: list[str] = []
@@ -54,7 +54,7 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
                 pages.append(text)
         return "\n".join(pages)
     except ImportError:
-        logger.warning("resume.pdf_pypdf2_unavailable", fallback="raw_decode")
+        logger.warning("resume.pdf_pypdf_unavailable", fallback="raw_decode")
         # Fallback: decode raw bytes (won't work well but avoids crash)
         return file_bytes.decode("utf-8", errors="ignore")
     except Exception as exc:

@@ -1,6 +1,6 @@
 # ADR-002: Technology Stack
 
-> Review note (6 November 2026): this is a historical design/specification. Targets are not measured acceptance results. The current voice runtime is custom asyncio code; see ADR-005 and docs/evals.md for implemented boundaries and validation limits.
+> Review note (6 November 2026): this is a historical design/specification. Targets are not measured acceptance results. The current voice runtime is custom asyncio code; the unused Pipecat dependency was removed during the security repair. JWT uses PyJWT with the existing configured algorithm. See ADR-005 and docs/evals.md for implemented boundaries and validation limits.
 **Date:** 2026-02-24
 **Status:** Accepted
 **Deciders:** Project owner + Claude Opus + ChatGPT + Gemini (consensus)
@@ -42,7 +42,7 @@ Selecting the full technology stack for InterviewCraft's backend, frontend, data
 
 | Option | Decision | Reason |
 |--------|----------|--------|
-| **JWT (python-jose) + bcrypt(12)** | ✅ Selected | Stateless, easy horizontal scaling, industry standard |
+| **JWT (PyJWT) + bcrypt(12)** | ✅ Selected | Stateless, easy horizontal scaling, industry standard |
 | Session cookies (server-side) | ❌ | Requires sticky sessions or Redis session store |
 | Passkeys / WebAuthn | ❌ | Phase 2 — reduces friction at MVP for a developer audience |
 

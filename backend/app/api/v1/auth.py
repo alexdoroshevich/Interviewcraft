@@ -13,7 +13,7 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from jose import JWTError
+from jwt.exceptions import InvalidTokenError as JWTError
 from pydantic import BaseModel as _BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -268,7 +268,7 @@ async def google_oauth(
 
 def _create_reset_token(user_id: str) -> str:
     """Create a short-lived JWT for password reset (30 min)."""
-    from jose import jwt as _jwt
+    import jwt as _jwt
 
     from app.config import settings as _settings
 

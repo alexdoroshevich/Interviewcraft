@@ -31,7 +31,7 @@ Design decisions: [WebSocket](docs/adr/001-websocket-vs-webrtc.md), [stack](docs
 
 ## Run locally
 
-Use Python **3.13+**, Node.js **20+**, PostgreSQL and Redis. From the repository root:
+Use Python **3.13+**, Node.js **20.19+**, PostgreSQL and Redis. From the repository root:
 
 ```sh
 python -m venv .venv

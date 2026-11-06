@@ -3,6 +3,8 @@ FROM python:3.13-slim AS base
 
 WORKDIR /app
 
+RUN python -m pip install --no-cache-dir --upgrade "pip>=26.3,<27"
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
