@@ -1,5 +1,6 @@
 # ADR-002: Technology Stack
 
+> Review note (6 November 2026): this is a historical design/specification. Targets are not measured acceptance results. The current voice runtime is custom asyncio code; see ADR-005 and docs/evals.md for implemented boundaries and validation limits.
 **Date:** 2026-02-24
 **Status:** Accepted
 **Deciders:** Project owner + Claude Opus + ChatGPT + Gemini (consensus)
@@ -133,11 +134,6 @@ Selecting the full technology stack for InterviewCraft's backend, frontend, data
 
 ---
 
-## Measured Result
+## Measurement status
 
-_(From benchmarks/ suite — see benchmarks/README.md for methodology)_
-
-- Voice pipeline E2E latency: p95 = 940ms (STT→LLM→TTS, mock providers)
-- Scoring Pearson r vs. human judgement: 0.91 (MAE = 6.2 pts)
-- Scoring variance on golden set: avg 4.1 pts, max 7 pts (target: < 8)
-- Memory recall accuracy: 95%, hallucination rate: 0%
+No current measured latency, scoring correlation/variance or memory-recall result is asserted. Previously shown values came without complete reproducible run provenance and are not acceptance evidence. See [evals](../evals.md) and the benchmark READMEs for distinctions between synthetic examples, targets and real saved runs.

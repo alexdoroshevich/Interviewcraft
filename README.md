@@ -1,352 +1,95 @@
-# InterviewCraft
+# Voice AI Interview Coach
 
-> **Deliberate practice engine for tech interviews.**
-> Evidence-based scoring · answer diff rewriting · rewind micro-practice · 22-skill graph · salary negotiation simulator
+**Interviewcraft — an independent engineering project by Alexander Doroshevich.**
 
-[![Backend CI](https://github.com/alexdoroshevich/interviewcraft/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/alexdoroshevich/interviewcraft/actions/workflows/backend-ci.yml)
-[![Frontend CI](https://github.com/alexdoroshevich/interviewcraft/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/alexdoroshevich/interviewcraft/actions/workflows/frontend-ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+Built an independent voice-AI interview practice application with a Python/FastAPI backend and Next.js frontend. Implemented streaming conversation orchestration, interruption handling, TTS fallback, cross-session memory, and feedback linked to transcript timestamps. Created for practical learning and implementation of AI systems.
 
----
+## Engineering implementation
 
-## What Is This?
-
-InterviewCraft is a **closed-loop training system** — not another mock interview tool. Like a sports coach who records every rep, identifies exactly what broke down, and makes you practice that specific thing until it's solid.
-
-```
-ANSWER → LINT (evidence spans) → DIFF (3 versions) → REWIND (re-answer)
-    ↑       → DELTA SCORE → SKILL GRAPH UPDATE → ADAPTIVE DRILL PLAN ──┘
-```
-
-Every session feeds back into a persistent 22-microskill graph. The system knows which skills are weakest, schedules spaced-repetition drills, and tracks your delta across sessions — not just a one-shot score.
-
----
-
-## Key Features
-
-| Feature | What it does |
-|---------|-------------|
-| **Evidence-backed scoring** | 15-rule rubric. Every triggered rule links to `{start_ms, end_ms}` — the exact moment you said it. No hallucinated quotes. |
-| **Answer diff (3 versions)** | Minimal patch · medium rewrite · ideal answer. Each shows `[+rule → +N points]`. |
-| **Rewind micro-practice** | Re-answer any weak segment. Delta shown immediately: `+12 structure, -3 depth`. |
-| **22-skill graph** | Microskills tracked across all sessions with trend lines and spaced-repetition scheduling. |
-| **Cross-session AI memory** | The interviewer AI remembers your patterns across sessions — recurring weaknesses, over-used stories, communication habits. |
-| **Story bank** | Auto-detects STAR stories. Coverage map shows which competencies lack evidence. Overuse warning after 3 uses. |
-| **Negotiation simulator** | AI recruiter with hidden max budget. Scores anchoring, value articulation, counter-strategy, emotional control. |
-| **JD Analyzer** | Paste a job description — auto-fills session type, company context, and focus skills. |
-| **Voice delivery analysis** | Filler words, WPM, pause patterns — scored against benchmarks after each session. |
-| **BYOK** | Use your own Anthropic / OpenAI / Deepgram / ElevenLabs keys. Encrypted at rest. |
-
----
-
-## Tech Stack
-
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Backend | FastAPI + Python 3.13 | Async-native, fully typed, fast iteration |
-| Frontend | Next.js 15 + Tailwind + Zustand | App Router, edge CDN, zero-config deploys |
-| Voice | Deepgram Nova-2 + Claude Sonnet + ElevenLabs | Best-in-class STT/LLM/TTS with fallback chain |
-| Database | PostgreSQL 16 + JSONB skill graph | Flexible schema, prompt-cached rubric reads |
-| Cache | Redis 7 | Session state + rate limiting + memory cache |
-| AI scoring | Anthropic Claude with prompt caching | Rubric cached = ~90% cheaper on re-reads |
-
----
+- **Streaming conversation:** browser audio over WebSocket → Deepgram STT → streamed LLM text → sentence-level TTS and audio playback. The asyncio orchestrator handles interruptions and cancels obsolete generation and synthesis tasks.
+- **Explicit TTS fallback:** ElevenLabs synthesis can fall back to Deepgram. STT, budget TTS and fallback use the same session-resolved Deepgram credential; a failing user key does not silently switch costs to the platform owner.
+- **Cross-session memory:** PostgreSQL stores sessions and coaching memory. Redis caches formatted context for loading into a later voice session; scoring triggers the background memory builder.
+- **Inspectable feedback:** scoring selects transcript time spans, and the server extracts quote text from stored words so feedback can be inspected against the cited passage.
+- **Provider interfaces and usage:** STT/LLM/TTS interfaces, session quality profiles and token/cost estimates make the voice pipeline's provider choices and usage explicit.
 
 ## Architecture
 
-### System Overview
-
-```mermaid
-graph TB
-    subgraph Client["Browser"]
-        UI["Next.js 15 App\nSSR + Zustand"]
-    end
-
-    subgraph Vercel["Vercel CDN"]
-        FE["Next.js Frontend\nEdge CDN · Auto HTTPS"]
-    end
-
-    subgraph Fly["Fly.io — FastAPI (Python 3.13)"]
-        API["REST API\n/api/v1/*"]
-        WS["WebSocket\n/api/v1/sessions/{id}/ws"]
-        subgraph Store["Data"]
-            PG[("PostgreSQL 16\nskill graph · sessions\nstories · usage_logs")]
-            RD[("Redis 7\nsession state · cache\nrate limiting")]
-        end
-    end
-
-    subgraph Providers["AI Providers (BYOK-capable)"]
-        DG["Deepgram Nova-2\nSTT · word timestamps"]
-        AN["Anthropic Claude\nSonnet → voice LLM\nHaiku → scoring / memory"]
-        EL["ElevenLabs\nTTS · mp3_44100_128\nfallback → Deepgram TTS"]
-    end
-
-    UI --> FE
-    FE -- "JWT Bearer" --> API
-    UI -- "WebSocket\n?token=JWT" --> WS
-    API --> PG & RD
-    WS --> PG & RD
-    WS --> DG & AN & EL
-```
-
-> **Why split Fly.io + Vercel?** Vercel serverless cannot hold WebSocket connections open for 20–50 min voice sessions. Fly.io runs the stateful backend as a long-lived process; Vercel handles CDN-optimised static + SSR delivery.
-
----
-
-### Voice Pipeline
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Mic as Microphone
-    participant WS as WebSocket Server
-    participant STT as Deepgram STT
-    participant LLM as Claude Sonnet
-    participant TTS as ElevenLabs / Deepgram TTS
-    participant DB as PostgreSQL
-
-    Mic->>WS: PCM audio chunks (streaming)
-    WS->>STT: Forward audio stream
-    STT-->>WS: Interim transcripts (low latency)
-    STT-->>WS: Final transcript + word timestamps
-
-    Note over WS: Adaptive debounce<br/>~4 s short answers · ~14 s long<br/>measured from last sound (not last word)<br/>[WAIT] token → skip TTS, keep accumulating
-
-    WS->>LLM: System prompt + cross-session memory + transcript
-    LLM-->>WS: Streaming response chunks
-
-    Note over WS: Barge-in detection<br/>threshold = 80 · 10 consecutive frames (~1 s)<br/>→ cancel TTS if user speaks
-
-    WS->>TTS: Text chunks (streaming)
-
-    Note over TTS: ElevenLabs primary<br/>401 / timeout → auto-fallback to Deepgram TTS
-
-    TTS-->>WS: Audio (mp3_44100_128)
-    WS-->>Mic: Audio playback to user
-
-    WS->>DB: Store segment (question · answer · evidence spans)
-    WS->>DB: Trigger async scoring + skill graph update
-```
-
----
-
-### The Deliberate-Practice Loop
-
 ```mermaid
 flowchart LR
-    A["🎙️ Voice Answer\n± transcription"] --> B
-
-    B["🔍 Lint\n15-rule rubric\nevidence = start_ms/end_ms spans\nno hallucinated quotes"]
-
-    B --> C["📝 Diff\n3 rewrite versions\nminimal · medium · ideal\neach shows +rule → +N pts"]
-
-    C --> D["⏪ Rewind\nre-answer any weak segment\nsame question · fresh slate"]
-
-    D --> E["📈 Delta Score\ninstant per-rule breakdown\n+12 structure · −3 depth"]
-
-    E --> F["🕸️ Skill Graph\n22 microskills\ntrend · spaced-repetition weight\ncross-session memory"]
-
-    F --> G["🎯 Drill Plan\nweakest skills · longest gap\nadaptive scheduling"]
-
-    G -.->|next session| A
-
-    style A fill:#6366f1,color:#fff,stroke:#4f46e5
-    style F fill:#7c3aed,color:#fff,stroke:#6d28d9
-    style G fill:#4f46e5,color:#fff,stroke:#3730a3
+  UI[Next.js browser client] -->|REST and WebSocket| API[FastAPI]
+  API --> STT[Streaming STT]
+  STT --> LLM[Streaming LLM]
+  LLM --> TTS[Sentence TTS and configured fallback]
+  TTS --> UI
+  API <--> PG[(PostgreSQL: sessions, words, scores, memory)]
+  API <--> RD[(Redis: cached context and session helpers)]
 ```
 
-**Why this matters:** Most AI interview tools are stateless — one session, one score, no memory. InterviewCraft accumulates a 22-microskill model of your weaknesses and schedules deliberate repetition on the exact skills that are failing. The loop above is what separates deliberate practice from mock interviews.
+The voice runtime uses custom asyncio orchestration in [pipeline.py](backend/app/services/voice/pipeline.py). See the [interfaces](backend/app/services/voice/interfaces.py), [provider factory](backend/app/services/voice/provider_factory.py), [scorer](backend/app/services/scoring/scorer.py), [memory loader](backend/app/services/memory/loader.py) and [builder](backend/app/services/memory/builder.py).
 
----
+Design decisions: [WebSocket](docs/adr/001-websocket-vs-webrtc.md), [stack](docs/adr/002-tech-stack.md), [scoring](docs/adr/003-scoring-architecture.md), [provider boundaries](docs/adr/005-provider-abstractions.md) and [scoring stability](docs/adr/008-scoring-stability.md).
 
-## Quick Start
+## Run locally
 
-### Prerequisites
+Use Python **3.13+**, Node.js **20+**, PostgreSQL and Redis. From the repository root:
 
-- Docker + Docker Compose
-- Python 3.13+, Node.js 20+
-- API keys: `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY`
-
-### Run locally
-
-```bash
-git clone https://github.com/alexdoroshevich/interviewcraft.git
-cd interviewcraft
-
-cp .env.example .env
-# Edit .env — add your API keys
-
-# Start all services: postgres, redis, backend, frontend
-docker compose up -d
-
-# First run: apply DB migrations
-cd backend && pip install -e ".[dev]" && alembic upgrade head
+```sh
+python -m venv .venv
+# Activate: Windows .venv\Scripts\Activate.ps1; POSIX source .venv/bin/activate
+python -m pip install -e "./backend[dev]"
+docker compose up -d postgres redis
 ```
 
-- Frontend: http://localhost:3000
-- API docs: http://localhost:8080/api/docs
+Copy `.env.example` to `.env` locally and configure the provider credentials and a development secret. For a backend running on the host, use PostgreSQL/Redis addresses matching docker-compose (defaults localhost:5432/interviewcraft and localhost:6379). Keep secrets out of Git. Google/SMTP integrations are optional for local voice practice.
 
-### Seed demo data
-
-```bash
-cd backend && python ../scripts/seed_demo.py
+```sh
+cd backend
+python -m alembic upgrade head
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8080
 ```
 
-Loads 10 pre-built sessions, a skill graph, story bank, and negotiation history. Demo login: `demo@interviewcraft.dev` / `demo1234`
+In another terminal, set the frontend's `NEXT_PUBLIC_API_URL=http://localhost:8080`:
 
----
-
-## Google Authentication
-
-The "Continue with Google" button activates automatically once `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set:
-
-1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web application)
-2. Authorized Origins: `http://localhost:3000` + your production domain
-3. Authorized Redirect URI: `http://localhost:8080/api/v1/auth/google/callback`
-4. Add to `.env`:
-   ```env
-   GOOGLE_CLIENT_ID=your-client-id
-   GOOGLE_CLIENT_SECRET=your-client-secret
-   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id
-   ```
-
----
-
-## Development
-
-```bash
-# Backend tests
-cd backend && pytest -x -q
-
-# Backend lint + type check
-cd backend && ruff check . && mypy app/
-
-# Frontend
-cd frontend && npm run lint && npm run type-check && npm test
-
-# E2E tests (requires running app)
-cd frontend && npm run test:e2e
+```sh
+cd frontend
+npm ci --legacy-peer-deps
+npm run dev
 ```
 
-All PRs run these automatically via GitHub Actions. A PR cannot merge unless every gate passes.
+Open http://localhost:3000. Voice practice uses the configured external APIs and incurs their usage charges. The `/demo` route can be viewed without an AI backend.
 
----
+### Screenshots: static UI with synthetic data
 
-## Deployment
+These are captures of the actual local frontend. Session counts, scores, readiness and costs on `/demo` are **hardcoded synthetic sample data, not results of a live AI session**.
 
-The backend deploys to [Fly.io](https://fly.io) and the frontend to [Vercel](https://vercel.com).
+![Local static demo with synthetic data](docs/screenshots/local-demo-desktop.jpg)
 
-**Frontend (Vercel):** Import the repo, set Root Directory to `frontend`, add `NEXT_PUBLIC_API_URL` pointing to your Fly.io backend. Every push auto-deploys; every PR gets a preview URL.
+[Mobile viewport: static synthetic demo](docs/screenshots/local-demo-mobile.jpg) · [Login screen](docs/screenshots/local-login.jpg)
 
-**Backend (Fly.io):**
-```bash
-flyctl auth login
-flyctl apps create <your-app-name>
-flyctl postgres create --name <your-db> && flyctl postgres attach <your-db>
-flyctl secrets set ANTHROPIC_API_KEY="..." DEEPGRAM_API_KEY="..." # see .env.example
-flyctl deploy --config backend/fly.toml
+## Tests
+
+```sh
+cd backend
+python -m pytest -m "not integration and not nightly" -q
+python -m ruff check .
+python -m mypy app/
+
+# From repository root in a separate terminal:
+cd frontend
+npm run lint
+npm run type-check
+npm test
+npm run build
 ```
 
-After the initial deploy, GitHub Actions handles all subsequent deploys automatically on push to `main`.
+[Targeted regressions](backend/tests/test_portfolio_regressions.py) cover cache-token costs, credential ownership, fallback, schema references, cancellation and memory decoding. See also [provider mocks](backend/tests/test_voice_providers.py), [memory tests](backend/tests/services/memory/) and [scoring tests](backend/tests/scoring/test_golden_answers.py).
 
----
+[Backend CI](.github/workflows/backend-ci.yml) runs Ruff, Mypy and tests excluding integration; the [PR gate](.github/workflows/pr-gate.yml) also excludes nightly tests. [Frontend CI](.github/workflows/frontend-ci.yml) runs lint, types, unit tests, build and a landing-page E2E check. Real-provider evaluation is separate: [methodology and markers](docs/evals.md), [benchmark entry points](benchmarks/README.md). Committed `results/example.json` files are synthetic output examples.
 
-## Database Migrations
+## Limitations
 
-```bash
-# Apply all pending migrations (local)
-cd backend && alembic upgrade head
-
-# Apply on Fly.io
-flyctl ssh console --app <your-app-name>
-cd /app && python -m alembic upgrade head
-
-# Create a new migration after model changes
-cd backend && alembic revision --autogenerate -m "description"
-```
-
----
-
-## Daily Workflow
-
-```bash
-# 1. Create a feature branch from main
-git checkout main && git pull
-git checkout -b feature/my-feature
-
-# 2. Make changes, commit
-git commit -m "feat: my feature"
-git push origin feature/my-feature
-
-# 3. Open a PR → CI runs automatically
-#    All gates must pass before merging
-
-# 4. Merge → auto-deploys to production
-```
-
----
-
-## Project Structure
-
-```
-interviewcraft/
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/          # Route handlers (auth, sessions, scoring, skills…)
-│   │   ├── models/          # SQLAlchemy ORM models
-│   │   ├── schemas/         # Pydantic request/response schemas
-│   │   └── services/        # Voice pipeline, scoring engine, memory, auth
-│   └── tests/               # Unit + integration tests
-├── frontend/
-│   ├── app/                 # Next.js App Router pages
-│   ├── components/          # Shared React components
-│   └── lib/api.ts           # Typed API client
-├── docs/
-│   └── adr/                 # Architecture Decision Records
-└── scripts/
-    ├── seed_demo.py         # Demo data
-    └── run_demo.sh          # One-command demo startup
-```
-
----
-
-## Architecture Decisions
-
-Key decisions are documented in [`docs/adr/`](docs/adr/):
-
-| ADR | Decision |
-|-----|---------|
-| [000](docs/adr/000-north-star-spec.md) | North Star specification |
-| [001](docs/adr/001-websocket-vs-webrtc.md) | WebSocket over WebRTC for voice |
-| [002](docs/adr/002-tech-stack.md) | Full tech stack rationale |
-| [003](docs/adr/003-scoring-architecture.md) | Evidence spans + batched scoring |
-| [004](docs/adr/004-rewind-segmentation.md) | Text-only rewind in MVP |
-| [005](docs/adr/005-provider-abstractions.md) | Provider ABC interfaces |
-| [006](docs/adr/006-privacy-data-retention.md) | Audio never stored, encrypted transcripts |
-| [007](docs/adr/007-swe-only-mvp.md) | SWE-only scope, extensible architecture |
-| [008](docs/adr/008-scoring-stability.md) | Four-technique variance reduction |
-
----
-
-## Benchmarks
-
-The [`benchmarks/`](benchmarks/) directory contains reproducible evaluations of the system's AI subsystems. All scripts require a valid Anthropic API key and run against the real model APIs. Dated output files are gitignored — only synthetic `example.json` baselines are committed.
-
-| Benchmark | What it measures | KPI |
-|-----------|-----------------|-----|
-| [memory-recall](benchmarks/memory-recall/) | Does the LLM accurately recall injected coaching context? | ≥ 95% recall, 0% hallucination |
-| [scoring-quality](benchmarks/scoring-quality/) | Do automated scores correlate with human judgement? | Pearson r ≥ 0.85, MAE ≤ 10 |
-| [voice-latency](benchmarks/voice-latency/) | STT → LLM → TTS latency (mock + production) | E2E p95 < 1 000 ms |
-| [cost-profile](benchmarks/cost-profile/) | Cost per session by quality profile and provider | — |
-
-Run any benchmark with `--confirm` to execute live API calls (see each README for cost estimates). Use the mock scripts to explore latency characteristics without any API keys.
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Scoring and parts of memory call Anthropic directly, so provider interchangeability is partial. Transcript quote extraction makes citations inspectable, but does not establish correct interpretation or objective scoring; caching does not guarantee identical answers. Usage costs are estimates rather than invoices, and failed/repair attempts need reconciliation for billing-grade accounting. Current public demo availability and a complete live voice → scoring → next-session memory run remain unverified. This is an independent engineering project; no measured adoption or business impact is claimed.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE).

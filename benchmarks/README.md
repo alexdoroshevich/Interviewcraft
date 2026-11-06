@@ -1,43 +1,21 @@
-# InterviewCraft — Benchmarks
+# Interviewcraft benchmark entry points
 
-Reproducible evaluation suite for all AI subsystems. Published for transparency.
+These scripts distinguish synthetic examples, offline simulations and optional real-model runs. No current recall, correlation, latency percentile, cache-hit or session-cost measurement is asserted by this README. Committed `results/example.json` files demonstrate output shape only. Previously listed numbers without reproducible run provenance have been removed.
 
-## Quick summary
+| Entry | Scope | External dependency |
+|---|---|---|
+| [memory recall](memory-recall/README.md) | Synthetic-profile context formatting and model recall; not persisted two-session behavior | Paid Anthropic API, explicit --confirm |
+| [scoring quality](scoring-quality/README.md) | Synthetic Q&A compared with author-assigned references | Paid Anthropic API, explicit --confirm |
+| [voice latency](voice-latency/README.md) | Offline timing simulation or analysis of saved session metrics | No API for simulator; DB for recorded metrics |
+| [cost profile](cost-profile/README.md) | Aggregate usage-log estimates | Existing DB; no provider calls by query script |
 
-| Benchmark | What it measures | Latest result | Cost/run | Needs DB | Needs key |
-|-----------|-----------------|---------------|----------|----------|-----------|
-| [memory-recall/](memory-recall/) | Memory recall accuracy (5 profiles, 40 Q) | 95.0% recall · 0% hallucination | ~$0.019 | No | Anthropic |
-| [cost-profile/](cost-profile/) | API cost per session by provider | ~$0.031/session (balanced) | Free | Yes | No |
-| [voice-latency/](voice-latency/) | STT + LLM TTFT + TTS first-byte | E2E p95 940ms (KPI: <1000ms) | Free (mock) | Optional | No |
-| [scoring-quality/](scoring-quality/) | Scorer vs. human-calibrated scores | Pearson r=0.91 · MAE=6.2 | ~$0.04 | No | Anthropic |
+Run from repository root in the configured Python environment:
 
-## Design principles
-
-1. **Reproducible locally.** Each script runs against your own infrastructure; `example.json` files show the output schema.
-2. **`--confirm` required** before any paid API calls — estimated cost is printed first.
-3. **Model tier convention** (same as production):
-   - `claude-haiku-4-5` — scoring evals, memory recall
-   - `claude-sonnet-4-6` — voice LLM, complex tasks
-4. **Offline tools require no credentials** — `mock_pipeline.py` and `dataset.json` work without API keys or DB.
-
-## Running all benchmarks
-
-```bash
-# From repo root
-export ANTHROPIC_API_KEY=...
-
-# Memory recall (~$0.019, ~2 min)
+```sh
+python benchmarks/voice-latency/mock_pipeline.py --turns 1000
+# Owner-approved paid runs only:
 python benchmarks/memory-recall/run.py --confirm
-
-# Scoring quality (~$0.04, ~3 min with --runs 1)
 python benchmarks/scoring-quality/run.py --confirm
-
-# Voice latency — offline mock (free, instant)
-python benchmarks/voice-latency/mock_pipeline.py
-
-# Cost profile — requires live DB
-DATABASE_URL=postgresql+asyncpg://user:pass@host/db python benchmarks/cost-profile/query.py
-
-# Voice latency — real data, requires live DB
-DATABASE_URL=postgresql+asyncpg://user:pass@host/db python benchmarks/voice-latency/analyze.py
 ```
+
+See [evaluation conditions](../docs/evals.md). Synthetic/estimated values do not demonstrate live providers, scoring accuracy or product adoption. No paid benchmark was run for this local review.

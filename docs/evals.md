@@ -1,144 +1,39 @@
-# InterviewCraft — Scoring Evaluation Methodology
+# Interviewcraft evaluation: what is tested and what is not established
 
-> How we measure scoring quality, detect regressions, and calibrate the rubric.
+Reviewed 6 November 2026. This is methodology and implementation status, not a claim of calibrated hiring/readiness accuracy.
 
----
+## Offline component checks
 
-## Why Evals Matter
+From `backend` with dev dependencies installed:
 
-InterviewCraft's moat is accurate, consistent scoring. If the rubric drifts between
-Claude versions (or between runs of the same version), users lose trust in deltas
-("did I actually improve, or did the model just score differently today?").
-
-**DoD KPI:** Scoring variance < 8 points across 5 runs of the same answer.
-
----
-
-## The Rubric (15 Rules)
-
-Defined in `backend/app/services/scoring/rubric.py`. Each rule has:
-- `id`: unique slug (e.g., `star_structure`, `tradeoff_analysis`)
-- `name`: human-readable label
-- `description`: what the evaluator checks
-- `category`: `structure | depth | communication | seniority_signal`
-- `applies_to`: list of session types this rule fires on
-- `impact`: 1–10 (how much the rule affects overall score)
-- `fix`: one-line actionable advice shown in the Lint Card
-
-All 15 rules are fed to Claude as a **cached prefix** (Anthropic prompt caching).
-This means the rubric instructions are fixed in the cache — Claude sees exactly
-the same rubric text every time, which is the single biggest driver of consistency.
-
----
-
-## Golden Answer Test Suite
-
-Location: `backend/tests/scoring/golden_answers.json`
-
-Schema:
-```json
-{
-  "id": "behavioral_star_strong_001",
-  "question": "Tell me about a time you led a complex technical project.",
-  "answer": "...",
-  "expected_rules_triggered": ["star_structure", "result_quantification"],
-  "expected_rules_not_triggered": ["vague_outcome"],
-  "expected_score_range": [72, 88],
-  "session_type": "behavioral",
-  "notes": "Strong STAR with quantified result. Should pass L5."
-}
+```sh
+python -m pytest -m "not integration and not nightly" -q
+python -m pytest tests/test_portfolio_regressions.py -q
 ```
 
-### Lite suite (CI)
-- 10 test cases × 3 runs each = 30 scoring calls per CI run
-- Asserts:
-  1. Score within `expected_score_range` in all 3 runs
-  2. Variance (max - min) ≤ 8 across 3 runs
-  3. All `expected_rules_triggered` appear in ≥ 2/3 runs
-  4. No `expected_rules_not_triggered` appear in > 1/3 runs
+Existing sources: `tests/scoring/test_golden_answers.py`, `tests/test_scorer_utils.py`, `tests/services/memory/test_memory_loader.py`, `test_memory_builder.py`, `tests/test_voice_providers.py`, `tests/services/voice/test_interfaces.py`. There is no `tests/scoring/test_evidence.py` or `scripts/variance_report.py` in this checkout; do not use their former documentation links as executable checks.
 
-### Full suite (nightly/release gate)
-- 30 test cases × 5 runs each = 150 scoring calls
-- Stricter: variance ≤ 6 across 5 runs
-- Includes edge cases: very short answers, very long answers, non-native English
+Golden-answer data is `tests/scoring/golden_answers.json`. Offline rubric/segmentation/scorer tests use mocks; deterministic fake responses do not establish deterministic model behavior. The earlier400-test/40-deselected report was historical. The current review records separate baseline and final test outputs for the actual source revision; it makes no inference about real providers from those tests.
 
-### Running the suites
-```bash
-# Lite suite (uses real Anthropic API)
-pytest tests/scoring/test_golden_answers.py -m lite -v
+## Paid, explicit real-model checks
 
-# Full suite (nightly)
-pytest tests/scoring/test_golden_answers.py -m nightly -v
+The existing markers are `integration` and `nightly`; there is no registered `lite` marker. From backend, only after an owner-approved budget and credentials:
 
-# Skip scoring tests (no API key)
-pytest -m "not integration and not nightly" -q
+```sh
+python -m pytest tests/scoring/test_golden_answers.py -m "integration and not nightly" -v
+python -m pytest tests/scoring/test_golden_answers.py -m nightly -v
 ```
 
----
+Inspect current parametrization/run counts before starting; these commands can make repeated paid requests and repairs. The CI definitions are source configuration, not evidence an account supplies keys or hosted checks passed. The frontend CI E2E job exercises the landing page, not microphone→score→memory. Do not run live tests automatically to make a review look complete.
 
-## Variance Tracking
+## Interpretation
 
-Every run of the golden suite writes to `tests/scoring/variance_log.jsonl`:
-```json
-{"date": "2026-02-25", "model": "claude-sonnet-4-6", "test_id": "behavioral_star_strong_001",
- "scores": [78, 80, 77], "variance": 3, "passed": true}
-```
+- The rubric and JSON schema constrain requested structure. `_call_anthropic()` currently does not set temperature. Caching and even a hypothetical temperature 0 do not guarantee identical answers.
+- The model chooses timestamp spans; the server extracts matching stored transcript words using offset/tolerance. This tests quote provenance separately from STT correctness, span relevance, rule applicability and scoring correctness. A quote can be null or misinterpreted.
+- Hand-authored/synthetic expected scores are test references, not independently validated human labels. Correlation with them is not objective interview quality or hiring prediction.
+- Synthetic `benchmarks/*/results/example.json` values are format examples, not measured results. The offline latency simulator is not STT/LLM/TTS performance evidence. Historical saved outputs require provenance/conditions before being promoted as current measurements.
+- Record source commit or source hashes, model/provider versions, prompt/rubric/schema hashes, input cases, run count, retries, token usage, timing definition, raw responses, failed cases and manual criteria. Retain failures; do not report only successful runs. Do not assert an achieved KPI without this evidence.
 
-Run `python scripts/variance_report.py` to get:
-- Per-rule consistency (which rules fire most/least consistently)
-- Per-category variance
-- Trend over time (regression detection)
+## Full application protocol (not implied by unit tests)
 
----
-
-## Calibration Process
-
-When rubric rules change:
-
-1. Update `rubric.py` with new/modified rules.
-2. Run full golden suite: `pytest -m nightly`
-3. If variance > 8 on any test case: adjust the rule `description` to be more specific.
-4. Target: 30/30 test cases within variance ≤ 6.
-5. Add new test case for the changed rule (min 1 strong + 1 weak example).
-6. Log calibration run in `docs/devlog/` with model version + variance results.
-
-**Important:** Calibration is model-specific. If Claude Sonnet version changes,
-re-run the full suite before deploying. Score drift between Claude versions is expected
-and must be detected before users notice.
-
----
-
-## Evidence Quality
-
-Beyond score consistency, we validate evidence extraction:
-
-- **Evidence type:** spans (`{start_ms, end_ms}`) — server extracts quotes, never LLM.
-- **Span validity:** every span must reference an existing word in `transcript_words`.
-- **Quote accuracy:** server-extracted quote must contain the rule keyword.
-
-Test: `tests/scoring/test_evidence.py` — verifies span → quote extraction on synthetic transcripts.
-
----
-
-## Scoring Variance by Category (baseline targets)
-
-| Category | Target max variance | Hardest rules |
-|---|---|---|
-| structure | ≤ 5 | `star_structure` (clear markers) |
-| depth | ≤ 8 | `tradeoff_analysis` (subjective) |
-| communication | ≤ 5 | `conciseness` (word count signal) |
-| seniority_signal | ≤ 10 | `ownership_language` (LLM judgment-heavy) |
-
-`seniority_signal` has highest variance by design — it requires holistic judgment.
-It also carries the highest impact weight to compensate.
-
----
-
-## What We Don't Eval (and why)
-
-| Item | Reason not evaled |
-|---|---|
-| Diff quality (3 versions) | Too subjective; use user ratings instead (Phase 2) |
-| Story detection accuracy | Need labeled dataset from real sessions |
-| Negotiation scoring | Calibration in progress (Week 7-8) |
-| Voice latency | Measured live via session_metrics, not test suite |
+Begin a local session → exchange voice audio → interrupt generation/playback → controlled primary-TTS failure → end session → trigger scoring and inspect spans → wait for PostgreSQL memory update → start another session and verify Redis/DB-loaded memory. Capture network/provider failures and spending ownership without printing keys. This requires local services, microphone and an approved provider budget. A homepage200/static demo is not this protocol. No full live protocol or new paid evaluation was run in this review.

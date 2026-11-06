@@ -1,129 +1,21 @@
-# ADR-005: Provider Abstractions
+# ADR-005: Provider interfaces and their current boundary
 
-**Status:** Accepted
-**Date:** 2026-02-24
-**Authors:** Lead Dev + Architect
+Status: accepted design, implementation notes reviewed 6 November 2026.
 
----
+The custom asyncio voice pipeline uses `STTProvider`, `LLMProvider`, `TTSProvider` ABCs and a per-session `ProviderSet`. ProviderFactory selects concrete implementations. This is an application integration boundary, not a universal multi-agent platform or a complete plugin system. Pipecat is a declared dependency, not the current voice orchestrator.
 
-## Problem
+## Factory routing
 
-The system uses multiple AI providers (Anthropic, Deepgram, ElevenLabs) for different tasks.
-How do we structure the code so we can:
-1. Swap providers without changing business logic.
-2. Route to different models based on quality profile.
-3. Test without real API keys.
+| Profile | Voice LLM | Task LLM fields | Primary TTS |
+|---|---|---|---|
+| quality | Sonnet | Sonnet | ElevenLabs |
+| balanced | Sonnet | Haiku | ElevenLabs |
+| budget | Haiku | Haiku | Deepgram Aura |
 
----
+An OpenAI BYOK adapter can be selected for the voice/provider set; its secondary model routing differs. This table describes the default Anthropic factory route, not every call in the application. Scorer instantiates AsyncAnthropic directly and memory components also make direct Anthropic calls. They do not all consume the ProviderSet task fields. Voice usage accounting is not fully provider-neutral, so an OpenAI adapter must not be sold as verified full-application interchangeability.
 
-## Options Considered
+## Credential ownership and fallback
 
-### Option A: Direct provider calls everywhere
+The factory resolves Deepgram once: a supplied user key takes precedence, otherwise the configured platform key is used. That key constructs STT, budget TTS and the session's fallback TTS. The pipeline receives `fallback_tts` explicitly and never reloads Settings or constructs a platform-key fallback during a primary-provider failure. Quality/balanced can switch ElevenLabs→that configured Deepgram instance. Budget already uses Deepgram and has no second fallback. Invalid BYOK credentials must fail, not transfer spending to a platform key. Owner-supplied keys for different providers are still separate credentials; this does not mean all providers have one account owner.
 
-- Each module calls `anthropic.messages.create(...)` directly.
-- Simple but tightly coupled.
-- Swapping providers = searching for all call sites.
-- **Rejected**: No testability, no routing.
-
-### Option B: Abstract base classes (ABCs) + ProviderSet
-
-- `STTProvider`, `LLMProvider`, `TTSProvider` as ABCs.
-- `ProviderSet` contains per-task LLM instances:
-  `voice_llm`, `scoring_llm`, `diff_llm`, `memory_llm`.
-- Factory selects concrete implementations based on config.
-- **Selected** ✅
-
-### Option C: Plugin/registry system
-
-- Providers self-register via entry points.
-- Dynamic loading at startup.
-- Over-engineering for MVP with 3 providers.
-- **Rejected**: Too complex for 3 fixed providers.
-
----
-
-## Decision
-
-**ABCs + ProviderSet. Per-task LLM routing based on quality profile.**
-
-### Interface design
-
-```python
-# app/services/voice/interfaces.py
-
-class STTProvider(ABC):
-    @abstractmethod
-    async def transcribe_stream(self, audio_chunks: AsyncIterator[bytes]
-                                ) -> AsyncIterator[TranscriptChunk]: ...
-
-class LLMProvider(ABC):
-    @abstractmethod
-    async def generate_stream(self, messages: list[dict],
-                               system: str) -> AsyncIterator[str]: ...
-
-    @abstractmethod
-    async def generate_json(self, messages: list[dict],
-                             schema: dict) -> dict: ...
-
-class TTSProvider(ABC):
-    @abstractmethod
-    async def synthesize_stream(self, text_chunks: AsyncIterator[str]
-                                 ) -> AsyncIterator[bytes]: ...
-```
-
-### ProviderSet
-
-```python
-@dataclass
-class ProviderSet:
-    stt: STTProvider          # Deepgram Nova-2
-    tts: TTSProvider          # ElevenLabs Turbo (Quality) / Deepgram Aura (Budget)
-    voice_llm: LLMProvider    # Sonnet for all profiles (voice needs quality)
-    scoring_llm: LLMProvider  # Sonnet (Quality) / Haiku (Balanced/Budget)
-    diff_llm: LLMProvider     # Sonnet (Quality) / Haiku (Balanced/Budget)
-    memory_llm: LLMProvider   # Haiku for all profiles (cheap, async OK)
-```
-
-### Quality profiles
-
-| Profile | STT | Voice LLM | Scoring LLM | TTS |
-|---|---|---|---|---|
-| Quality | Deepgram Nova-2 | Sonnet 4.6 | Sonnet 4.6 | ElevenLabs Turbo |
-| Balanced | Deepgram Nova-2 | Sonnet 4.6 | Haiku 4.5 | ElevenLabs Turbo |
-| Budget | Deepgram Nova-2 | Sonnet 4.6 | Haiku 4.5 | Deepgram Aura |
-
-Note: Voice LLM always Sonnet — latency and quality matter most for real-time conversation.
-Scoring/diff/memory can use Haiku since they're async and lower-stakes.
-
-### Current implementation status
-
-The scoring module directly instantiates `AsyncAnthropic` (bypasses ABC for MVP simplicity).
-The voice pipeline uses Pipecat which handles provider abstraction internally.
-
-The ABCs in `interfaces.py` are defined and ready for:
-- Unit testing with mock providers.
-- Swapping providers without changing business logic.
-- BYOK (✅ shipped Phase 2): user-supplied provider credentials, encrypted at rest.
-
----
-
-## Tradeoffs Accepted
-
-| Tradeoff | Rationale |
-|---|---|
-| Scoring bypasses ABC (direct Anthropic client) | The scoring module is complex enough; adding an ABC layer adds indirection with no immediate benefit. ABCs live in `interfaces.py` for Phase 2. |
-| Voice LLM always Sonnet (not profile-selectable) | Haiku voice quality noticeably worse in real-time conversation. User experience > cost savings for voice. |
-| No local model support in MVP | Provider ABCs make it possible, but local inference (Ollama, llama.cpp) requires different async patterns. Phase 2. |
-| ProviderSet created per-session (not singleton) | Clean, no shared state. Cost: minimal instantiation overhead. |
-
----
-
-## Phase 2 — Shipped
-
-- **BYOK** ✅ — User-supplied provider credentials encrypted at rest via `app/services/byok.py`. Decrypted in-memory per WebSocket session only.
-- **Interviewer personas** ✅ — Routed via ProviderSet per session config.
-- **TTS fallback chain** ✅ — Primary TTS failure triggers automatic fallback to secondary provider.
-
-## Future Work (Phase 3+)
-
-- Local mode: Ollama/llama.cpp implementation of LLMProvider.
+Tests in `backend/tests/test_provider_factory.py`, `test_voice_providers.py` and `test_portfolio_regressions.py` use fake providers/credentials, including BYOK and failure paths. They verify routing and cancellation/failure mechanics without API calls; real audio quality, authorization and invoices remain live checks.

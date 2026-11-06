@@ -1,5 +1,6 @@
 # ADR-000: North Star Specification
 
+> Review note (6 November 2026): this is a historical design/specification. Targets are not measured acceptance results. The current voice runtime is custom asyncio code; see ADR-005 and docs/evals.md for implemented boundaries and validation limits.
 **Date:** 2026-02-24
 **Status:** Accepted
 **Deciders:** Project owner + Claude Opus + ChatGPT + Gemini (6-hour planning session)
