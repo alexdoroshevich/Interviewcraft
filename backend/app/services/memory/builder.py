@@ -208,7 +208,8 @@ async def build_memory(
         _HAIKU,
         response.usage.input_tokens,
         response.usage.output_tokens,
-        getattr(response.usage, "cache_read_input_tokens", 0),
+        getattr(response.usage, "cache_read_input_tokens", 0) or 0,
+        cache_creation_tokens=getattr(response.usage, "cache_creation_input_tokens", 0) or 0,
     )
     await log_usage(
         db,

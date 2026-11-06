@@ -42,6 +42,28 @@ _MAX_RETRIES = 2
 # Passed to Anthropic as the tool input_schema so it enforces structure.
 
 _SCORING_SCHEMA: dict[str, Any] = {
+    "$defs": {
+        "diff_version": {
+            "type": "object",
+            "required": ["text", "changes", "estimated_new_score"],
+            "properties": {
+                "text": {"type": "string"},
+                "changes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "before": {"type": "string"},
+                            "after": {"type": "string"},
+                            "rule": {"type": "string"},
+                            "impact": {"type": "string"},
+                        },
+                    },
+                },
+                "estimated_new_score": {"type": "integer"},
+            },
+        }
+    },
     "type": "object",
     "required": [
         "overall_score",
@@ -101,28 +123,7 @@ _SCORING_SCHEMA: dict[str, Any] = {
                 "medium": {"$ref": "#/$defs/diff_version"},
                 "ideal": {"$ref": "#/$defs/diff_version"},
             },
-            "$defs": {
-                "diff_version": {
-                    "type": "object",
-                    "required": ["text", "changes", "estimated_new_score"],
-                    "properties": {
-                        "text": {"type": "string"},
-                        "changes": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "before": {"type": "string"},
-                                    "after": {"type": "string"},
-                                    "rule": {"type": "string"},
-                                    "impact": {"type": "string"},
-                                },
-                            },
-                        },
-                        "estimated_new_score": {"type": "integer"},
-                    },
-                }
-            },
+
         },
         "memory_hints": {
             "type": "object",
@@ -265,6 +266,7 @@ class Scorer:
             input_tokens=metrics["input_tokens"],
             output_tokens=metrics["output_tokens"],
             cached_tokens=cached_tokens,
+            cache_creation_tokens=metrics.get("cache_creation_tokens", 0),
         )
         await log_usage(
             db=db,
@@ -410,7 +412,8 @@ class Scorer:
         metrics: dict[str, Any] = {
             "input_tokens": usage.input_tokens,
             "output_tokens": usage.output_tokens,
-            "cached_tokens": getattr(usage, "cache_read_input_tokens", 0),
+            "cached_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+            "cache_creation_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
         }
 
         for block in response.content:

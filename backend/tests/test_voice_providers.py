@@ -25,6 +25,8 @@ def _make_anthropic_usage(input_tokens: int = 10, output_tokens: int = 20) -> Ma
     u = MagicMock()
     u.input_tokens = input_tokens
     u.output_tokens = output_tokens
+    u.cache_read_input_tokens = 0
+    u.cache_creation_input_tokens = 0
     return u
 
 

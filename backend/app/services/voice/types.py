@@ -41,6 +41,7 @@ class LLMMetrics:
     input_tokens: int
     output_tokens: int
     cached_tokens: int = 0  # Anthropic cache_read_input_tokens
+    cache_creation_tokens: int = 0  # Anthropic 5-minute cache_creation_input_tokens
 
 
 @dataclass

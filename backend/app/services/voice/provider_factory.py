@@ -1,9 +1,9 @@
 """ProviderFactory — creates ProviderSet based on session quality_profile.
 
 Quality profiles (from spec):
-  quality:  Sonnet all tasks + ElevenLabs     (~$0.60–1.30/session)
-  balanced: Sonnet voice, Haiku scoring/diff/memory + ElevenLabs  (~$0.30–0.60)
-  budget:   Haiku all + Deepgram Aura-1 TTS  (~$0.15–0.30)
+  quality:  Sonnet routing + ElevenLabs
+  balanced: Sonnet voice, Haiku task routing + ElevenLabs
+  budget:   Haiku routing + Deepgram Aura-1 TTS
 """
 
 import structlog
@@ -94,7 +94,7 @@ class ProviderFactory:
         # Budget TTS: use voice_id as Deepgram Aura model if it's a Deepgram voice
         # (Deepgram voice IDs start with "aura-"); otherwise use default female voice.
         dg_tts_model = voice_id if (voice_id and voice_id.startswith("aura-")) else None
-        dg_tts_kwargs: dict[str, str] = {"api_key": settings.deepgram_api_key}
+        dg_tts_kwargs: dict[str, str] = {"api_key": deepgram_key}
         if dg_tts_model:
             dg_tts_kwargs["model"] = dg_tts_model
         deepgram_tts = DeepgramTTSProvider(**dg_tts_kwargs)
@@ -107,6 +107,7 @@ class ProviderFactory:
                 diff_llm=primary_llm,
                 memory_llm=primary_llm,
                 tts=elevenlabs,
+                fallback_tts=deepgram_tts,
                 quality_profile=quality_profile,
             )
         elif quality_profile == "balanced":
@@ -117,10 +118,11 @@ class ProviderFactory:
                 diff_llm=secondary_llm,
                 memory_llm=secondary_llm,
                 tts=elevenlabs,
+                fallback_tts=deepgram_tts,
                 quality_profile=quality_profile,
             )
         else:  # budget
-            # Budget profile uses Deepgram Aura TTS (spec: ~$0.15–0.30/session)
+            # Budget already uses Deepgram; do not retry with a different credential owner.
             provider_set = ProviderSet(
                 stt=stt,
                 voice_llm=haiku,
