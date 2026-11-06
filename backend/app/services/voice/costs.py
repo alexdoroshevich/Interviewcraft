@@ -30,15 +30,26 @@ def calc_anthropic_cost(
     input_tokens: int,
     output_tokens: int,
     cached_tokens: int = 0,
+    cache_creation_tokens: int = 0,
 ) -> Decimal:
-    """Return total cost in USD for one Anthropic API call."""
+    """Estimate USD from Anthropic's disjoint usage categories.
+
+    input_tokens is ordinary (uncached) input, not the total prompt length.
+    cached_tokens counts cache reads; cache_creation_tokens counts writes at
+    the 5-minute TTL used by this application (1.25x ordinary input price).
+    This function does not price a 1-hour cache TTL.
+    """
     if model not in ANTHROPIC_PRICES:
         raise ValueError(f"Unknown Anthropic model: {model}")
     rates = ANTHROPIC_PRICES[model]
-    non_cached = input_tokens - cached_tokens
+    if any(
+        count < 0 for count in (input_tokens, output_tokens, cached_tokens, cache_creation_tokens)
+    ):
+        raise ValueError("Token counts must be non-negative")
     cost = (
-        (non_cached / 1_000_000) * rates["input"]
+        (input_tokens / 1_000_000) * rates["input"]
         + (cached_tokens / 1_000_000) * rates["input"] * ANTHROPIC_CACHE_DISCOUNT
+        + (cache_creation_tokens / 1_000_000) * rates["input"] * 1.25
         + (output_tokens / 1_000_000) * rates["output"]
     )
     return Decimal(str(round(cost, 6)))

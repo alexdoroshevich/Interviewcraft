@@ -20,7 +20,7 @@ from typing import Annotated
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import Response as PDFResponse
-from jose import JWTError
+from jwt.exceptions import InvalidTokenError as JWTError
 from pydantic import BaseModel as _BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

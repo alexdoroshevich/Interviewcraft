@@ -46,7 +46,6 @@ from app.services.voice.costs import (
 )
 from app.services.voice.interfaces import ProviderSet
 from app.services.voice.prompts import RE_ENGAGE_TEXT, SOFT_PROMPT_TEXT, get_system_prompt
-from app.services.voice.providers.deepgram_tts import DeepgramTTSProvider
 from app.services.voice.smart_pause import PauseAction, SmartPause
 from app.services.voice.types import LatencySnapshot, PipelineState, TranscriptChunk
 
@@ -748,61 +747,66 @@ class VoicePipeline:  # pragma: no cover
         # Start TTS worker concurrently
         tts_task = asyncio.create_task(_tts_worker())
 
-        # Inject tool context (board or code state) into the last user message
-        # so the LLM sees what the candidate has drawn/written — without
-        # polluting self._conversation (history stays clean).
-        _messages = list(self._conversation)
-        if self._tool_context and _messages and _messages[-1]["role"] == "user":
-            _messages = _messages[:-1] + [
-                {
-                    "role": "user",
-                    "content": f"{self._tool_context}\n\n---\n{_messages[-1]['content']}",
-                }
-            ]
+        try:
+            # Inject tool context (board or code state) into the last user message
+            # so the LLM sees what the candidate has drawn/written — without
+            # polluting self._conversation (history stays clean).
+            _messages = list(self._conversation)
+            if self._tool_context and _messages and _messages[-1]["role"] == "user":
+                _messages = _messages[:-1] + [
+                    {
+                        "role": "user",
+                        "content": f"{self._tool_context}\n\n---\n{_messages[-1]['content']}",
+                    }
+                ]
 
-        async for token in self._providers.voice_llm.generate_stream(
-            messages=_messages,
-            system=self._system_prompt,
-            max_tokens=tuning.PIPELINE_LLM_MAX_TOKENS,
-        ):
-            if first_token:
-                llm_ttft_ms = int((time.monotonic() - llm_start) * 1000)
-                first_token = False
-                logger.debug("pipeline.llm_ttft", ms=llm_ttft_ms)
-
-            full_response += token
-
-            # [WAIT] escape hatch — if the LLM thinks the answer was incomplete,
-            # it outputs "[WAIT]". We abort TTS and return to listening.
-            # Guard: after 2 consecutive [WAIT] signals, stop waiting — the user
-            # probably said something complete and the LLM is miscalibrating.
-            if (
-                full_response.strip().startswith("[WAIT]")
-                and self._wait_count < tuning.PIPELINE_MAX_WAIT_COUNT
+            async for token in self._providers.voice_llm.generate_stream(
+                messages=_messages,
+                system=self._system_prompt,
+                max_tokens=tuning.PIPELINE_LLM_MAX_TOKENS,
             ):
-                logger.info("pipeline.llm_wait_signal", response_len=len(full_response))
-                await tts_queue.put(None)
-                await tts_task
-                self._interrupted.clear()
-                # Remove the user message we just added — it will be carried over
-                if self._conversation and self._conversation[-1]["role"] == "user":
-                    self._conversation.pop()
-                return 0, 0  # Signal to caller: no real turn happened
+                if first_token:
+                    llm_ttft_ms = int((time.monotonic() - llm_start) * 1000)
+                    first_token = False
+                    logger.debug("pipeline.llm_ttft", ms=llm_ttft_ms)
 
-            # Text is sent by _tts_worker AFTER each sentence's audio finishes
+                full_response += token
 
-            # Enqueue completed sentences for TTS (non-blocking)
-            for sentence in sentence_buf.add(token):
-                await tts_queue.put(sentence)
+                # [WAIT] escape hatch — if the LLM thinks the answer was incomplete,
+                # it outputs "[WAIT]". We abort TTS and return to listening.
+                # Guard: after 2 consecutive [WAIT] signals, stop waiting — the user
+                # probably said something complete and the LLM is miscalibrating.
+                if (
+                    full_response.strip().startswith("[WAIT]")
+                    and self._wait_count < tuning.PIPELINE_MAX_WAIT_COUNT
+                ):
+                    logger.info("pipeline.llm_wait_signal", response_len=len(full_response))
+                    await tts_queue.put(None)
+                    await tts_task
+                    self._interrupted.clear()
+                    # Remove the user message we just added — it will be carried over
+                    if self._conversation and self._conversation[-1]["role"] == "user":
+                        self._conversation.pop()
+                    return 0, 0  # Signal to caller: no real turn happened
 
-        # Flush remainder
-        remainder = sentence_buf.flush()
-        if remainder:
-            await tts_queue.put(remainder)
+                # Text is sent by _tts_worker AFTER each sentence's audio finishes
 
-        # Signal TTS worker to stop and wait for it
-        await tts_queue.put(None)
-        await tts_task
+                # Enqueue completed sentences for TTS (non-blocking)
+                for sentence in sentence_buf.add(token):
+                    await tts_queue.put(sentence)
+
+            # Flush remainder
+            remainder = sentence_buf.flush()
+            if remainder:
+                await tts_queue.put(remainder)
+
+            # Signal TTS worker to stop and wait for it
+            await tts_queue.put(None)
+            await tts_task
+        finally:
+            if not tts_task.done():
+                tts_task.cancel()
+            await asyncio.gather(tts_task, return_exceptions=True)
 
         await websocket.send_json({"type": "llm_chunk", "text": "", "is_final": True})
 
@@ -891,10 +895,10 @@ class VoicePipeline:  # pragma: no cover
         """Switch to Deepgram TTS if primary TTS provider fails."""
         if self._tts_fallback_active:
             return
-        from app.config import Settings
-
-        settings = Settings()
-        self._providers.tts = DeepgramTTSProvider(api_key=settings.deepgram_api_key)
+        fallback = self._providers.fallback_tts
+        if fallback is None:
+            raise RuntimeError("No TTS fallback configured for this session")
+        self._providers.tts = fallback
         self._tts_fallback_active = True
         logger.warning("pipeline.tts_fallback_activated", reason="primary TTS provider failed")
 
@@ -904,8 +908,8 @@ class VoicePipeline:  # pragma: no cover
             async for chunk in self._providers.tts.synthesize_stream(text):
                 yield chunk
         except Exception as exc:
-            if self._tts_fallback_active:
-                raise  # Already on fallback, don't loop
+            if self._tts_fallback_active or self._providers.fallback_tts is None:
+                raise  # No fallback or already using it; never switch billing owners.
             logger.warning("pipeline.tts_error", error=str(exc))
             err_str = str(exc)
             self._tts_fallback_reason = (
@@ -1050,6 +1054,7 @@ class VoicePipeline:  # pragma: no cover
             input_tokens=metrics.input_tokens,
             output_tokens=metrics.output_tokens,
             cached_tokens=metrics.cached_tokens,
+            cache_creation_tokens=metrics.cache_creation_tokens,
         )
         self._total_cost += cost
         try:

@@ -8,7 +8,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import jwt
+import jwt
 
 from app.config import settings
 
@@ -43,5 +43,5 @@ def create_refresh_token(user_id: uuid.UUID) -> str:
 
 
 def decode_token(token: str) -> dict[str, Any]:
-    """Decode and verify a JWT.  Raises JWTError on invalid / expired token."""
+    """Decode and verify a JWT.  Raises InvalidTokenError on invalid / expired token."""
     return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])

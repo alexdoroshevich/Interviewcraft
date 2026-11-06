@@ -46,6 +46,8 @@ async def load_memory_context(
 
         redis = await get_redis()
         cached = await redis.get(cache_key)
+        if isinstance(cached, bytes):
+            cached = cached.decode("utf-8")
         if cached is not None:
             logger.debug("memory.cache_hit", user_id=str(user_id))
             return cached if cached != "__NONE__" else None

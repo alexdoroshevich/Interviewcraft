@@ -273,7 +273,7 @@ def test_unknown_model_raises():
 def test_anthropic_cost_cached_is_cheaper():
     full = calc_anthropic_cost("claude-sonnet-4-6", input_tokens=1000, output_tokens=200)
     cached = calc_anthropic_cost(
-        "claude-sonnet-4-6", input_tokens=1000, output_tokens=200, cached_tokens=800
+        "claude-sonnet-4-6", input_tokens=200, output_tokens=200, cached_tokens=800
     )
     assert cached < full
 

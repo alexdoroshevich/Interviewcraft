@@ -243,6 +243,7 @@ async def test_scorer_calls_anthropic_and_returns_result() -> None:
     mock_usage.input_tokens = 500
     mock_usage.output_tokens = 800
     mock_usage.cache_read_input_tokens = 300  # prompt cache hit
+    mock_usage.cache_creation_input_tokens = 0
 
     mock_block = MagicMock()
     mock_block.type = "tool_use"
@@ -313,6 +314,7 @@ async def test_scorer_retries_on_no_tool_use_block() -> None:
     mock_usage.input_tokens = 400
     mock_usage.output_tokens = 600
     mock_usage.cache_read_input_tokens = 0
+    mock_usage.cache_creation_input_tokens = 0
 
     # First call: no tool_use block (simulates parse failure)
     bad_text_block = MagicMock()

@@ -1,52 +1,11 @@
-# Cost Profile Benchmark
+# Usage-log cost estimates
 
-Analyzes API cost efficiency of InterviewCraft across providers and session types.
+From repository root with access to an existing database and DATABASE_URL configured:
 
-## Architecture
-
-Every API call (LLM, STT, TTS) is logged to the `usage_logs` table with:
-- `provider` (anthropic / deepgram / elevenlabs)
-- `operation` (voice_llm / scoring_llm / memory_build / stt / tts)
-- `cost_usd` (exact amount for that call)
-- `latency_ms`
-- `cached` (Anthropic prompt cache hit)
-
-## Baseline Results
-
-### Cost per session (by quality profile)
-
-| Profile | Avg cost/session | Notes |
-|---------|-----------------|-------|
-| Balanced | $0.031 | Haiku for scoring/memory, Sonnet for voice |
-| Quality | $0.078 | Sonnet for all operations |
-
-### Per-provider breakdown
-
-| Provider | Operation | Avg cost/call | Avg latency |
-|----------|-----------|--------------|-------------|
-| Anthropic | voice_llm (Sonnet) | $0.0041 | 312ms |
-| Anthropic | scoring_llm (Haiku) | $0.0018 | 1850ms |
-| Anthropic | memory_build (Haiku) | $0.0004 | 420ms |
-| Deepgram | stt | $0.0012 | 178ms |
-| ElevenLabs | tts | $0.0019 | 390ms |
-
-### Anthropic prompt cache performance
-
-| Metric | Value |
-|--------|-------|
-| Cache hit rate | 71.2% |
-| Note | Rubric prefix (~4K tokens) cached per session |
-
-## How to run
-
-```bash
-DATABASE_URL=postgresql+asyncpg://user:pass@host/db python benchmarks/cost-profile/query.py
+```sh
+python benchmarks/cost-profile/query.py
 ```
 
-Output goes to stdout only. `results/example.json` shows the output schema.
+This script aggregates saved `usage_logs`; it does not invoke model/audio APIs. `cost_usd` is a configured-rate estimate, not a provider invoice. The corrected Anthropic helper prices disjoint ordinary input, cache reads and 5-minute cache writes. No 1-hour write TTL is configured. Successful-call estimates include writes, but cache-write token counts have no dedicated persisted column; failed/repaired attempts and provider-neutral routing are not fully reconciled. Do not claim every billed call or exact session cost is captured.
 
-## Key insight: Prompt caching saves ~70% on scoring costs
-
-The scoring rubric (~4,000 tokens) is a stable prefix that gets cached automatically by Anthropic's
-server-side caching. Every subsequent scoring call in a session hits the cache, reducing effective
-input token cost by ~70% for the rubric portion.
+`results/example.json` is synthetic. Previously listed session prices, 71.2% cache-hit rate and 70% savings are not retained as measured results without raw provenance/conditions. Cache eligibility/hits and generation variability are separate; a cache does not guarantee all requests hit or all outputs match. [Evaluation methodology](../../docs/evals.md).

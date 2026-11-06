@@ -108,3 +108,4 @@ class ProviderSet:
     memory_llm: LLMProvider  # Skill graph memory extraction (Weeks 5-6)
     tts: TTSProvider
     quality_profile: str = "balanced"
+    fallback_tts: TTSProvider | None = None  # Resolved once with the session's credentials
